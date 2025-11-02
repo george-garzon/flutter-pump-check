@@ -1,0 +1,159 @@
+import 'package:flutter/material.dart';
+import '../services/workout_service.dart';
+import '../widgets/progress_ring.dart';
+
+Future<void> showWorkoutModal(BuildContext context) async {
+  double selectedMinutes = 30; // default slider
+  int todayMinutes = 0;
+  int goalMinutes = 45; // You can later fetch this from Firestore 'users' doc
+
+  // Get today's data
+  final todayData = await WorkoutService.getToday();
+  if (todayData != null) {
+    todayMinutes = todayData['totalMinutes'] ?? 0;
+  }
+
+  await showDialog(
+    context: context,
+    builder: (ctx) {
+      final theme = Theme.of(ctx);
+      return AlertDialog(
+        backgroundColor: theme.colorScheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        content: StatefulBuilder(
+          builder: (ctx, setState) {
+            final progress = goalMinutes > 0 ? todayMinutes / goalMinutes : 0.0;
+
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Progress Ring
+                ProgressRing(progress: progress.clamp(0.0, 1.0), size: 120),
+                const SizedBox(height: 12),
+
+                // Text labels
+                Text(
+                  "$todayMinutes min / $goalMinutes min",
+                  style: theme.textTheme.bodySmall,
+                ),
+                const SizedBox(height: 12),
+
+                // Selected minutes
+                Text(
+                  "${selectedMinutes.toStringAsFixed(0)} min",
+                  style: theme.textTheme.bodyMedium!.copyWith(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                // Slider
+                Slider(
+                  value: selectedMinutes,
+                  min: 0,
+                  max: 180,
+                  divisions: 36,
+                  label: "${selectedMinutes.toStringAsFixed(0)} min",
+                  onChanged: (v) => setState(() => selectedMinutes = v),
+                ),
+
+                const SizedBox(height: 10),
+
+                // Preset buttons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _presetButton(
+                      ctx,
+                      label: "Quick Warmup",
+                      minutes: 10,
+                      onSelect: (m) =>
+                          setState(() => selectedMinutes = m.toDouble()),
+                    ),
+                    _presetButton(
+                      ctx,
+                      label: "Full Workout",
+                      minutes: 45,
+                      onSelect: (m) =>
+                          setState(() => selectedMinutes = m.toDouble()),
+                    ),
+                    _presetButton(
+                      ctx,
+                      label: "Marathon Day",
+                      minutes: 90,
+                      onSelect: (m) =>
+                          setState(() => selectedMinutes = m.toDouble()),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // Log button
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 40,
+                      vertical: 12,
+                    ),
+                  ),
+                  onPressed: () async {
+                    final mins = selectedMinutes.toInt();
+
+                    await WorkoutService.logPump(mins);
+
+                    // Update local state for instant feedback
+                    setState(() {
+                      todayMinutes += mins;
+                    });
+
+                    Navigator.pop(ctx);
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text("💪 Pump logged: $mins min!"),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+                  child: const Text(
+                    "Log Workout",
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+
+                // Close button
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text("Close"),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+    },
+  );
+}
+
+// Small preset button widget
+Widget _presetButton(
+  BuildContext context, {
+  required String label,
+  required int minutes,
+  required ValueChanged<int> onSelect,
+}) {
+  final theme = Theme.of(context);
+  return OutlinedButton(
+    style: OutlinedButton.styleFrom(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      side: BorderSide(color: theme.colorScheme.primary.withOpacity(0.3)),
+    ),
+    onPressed: () => onSelect(minutes),
+    child: Text(label, style: theme.textTheme.bodySmall),
+  );
+}

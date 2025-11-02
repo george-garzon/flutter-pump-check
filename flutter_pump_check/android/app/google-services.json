@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "460432828885",
+    "project_id": "pump-check",
+    "storage_bucket": "pump-check.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:460432828885:android:836de855c40acb25f9755c",
+        "android_client_info": {
+          "package_name": "com.example.flutter_pump_check"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDCgXOmVD_7ufr2-6BfY0MdZ2HqHb5_M8k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
