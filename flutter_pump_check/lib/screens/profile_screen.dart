@@ -18,6 +18,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isSaving = false;
   bool _isLoading = true;
 
+  String? _profilePhotoUrl;
+
   @override
   void initState() {
     super.initState();
@@ -36,10 +38,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final data = doc.data() ?? {};
         nameController.text = data['name'] ?? user.displayName ?? '';
         goalController.text = (data['goalMinutes'] ?? 45).toString();
+        _profilePhotoUrl = data['photoUrl']; // ✅ always from users collection
       } else {
-        // If user doc doesn't exist yet, fallback
         nameController.text = user.displayName ?? '';
         goalController.text = '45';
+        _profilePhotoUrl = null;
       }
     } catch (e) {
       debugPrint("Error loading profile: $e");
@@ -58,14 +61,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final newName = nameController.text.trim();
       final newGoal = int.tryParse(goalController.text.trim()) ?? 45;
 
-      // ✅ Update Firebase Auth displayName
       await user.updateDisplayName(newName);
 
-      // ✅ Update Firestore user document
-      final usersRef = FirebaseFirestore.instance.collection('users');
-      await usersRef.doc(user.uid).set({
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
         'name': newName,
         'goalMinutes': newGoal,
+        'photoUrl': _profilePhotoUrl, // ✅ keep Firestore as source of truth
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
@@ -86,21 +87,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final googleSignIn = GoogleSignIn();
       if (await googleSignIn.isSignedIn()) {
-        await googleSignIn.disconnect(); // 🔹 disconnect from Google
-        await googleSignIn.signOut(); // 🔹 ensure local sign-out
+        await googleSignIn.disconnect();
+        await googleSignIn.signOut();
       }
 
-      await FirebaseAuth.instance.signOut(); // 🔹 sign out from Firebase
-
-      // Optional: small delay to allow UI rebuild
+      await FirebaseAuth.instance.signOut();
       await Future.delayed(const Duration(milliseconds: 300));
 
-      // Go back to AuthGate or LoginScreen
       if (mounted) {
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          '/', // or '/login' if you prefer
-          (route) => false,
-        );
+        Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
       }
     } catch (e) {
       debugPrint("Logout error: $e");
@@ -113,7 +108,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final photoUrl = user.photoURL;
+    final photoUrl = _profilePhotoUrl;
 
     if (_isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -130,20 +125,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
         padding: const EdgeInsets.all(24.0),
         child: Column(
           children: [
-            // Avatar + Name
-            CircleAvatar(
-              radius: 45,
-              backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
-              backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
-              child: photoUrl == null
-                  ? const Icon(Icons.person, size: 45)
-                  : null,
+            // 🔹 Avatar + Email
+            GestureDetector(
+              onTap: () async {
+                // Later you can allow image upload here
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Profile picture editing coming soon! 😎'),
+                  ),
+                );
+              },
+              child: CircleAvatar(
+                radius: 45,
+                backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
+                child: ClipOval(
+                  child: photoUrl != null && photoUrl.isNotEmpty
+                      ? Image.network(
+                          photoUrl,
+                          fit: BoxFit.cover,
+                          width: 90,
+                          height: 90,
+                          errorBuilder: (context, error, stackTrace) {
+                            debugPrint("Image failed to load: $error");
+                            return const Icon(
+                              Icons.person,
+                              size: 45,
+                              color: Colors.white,
+                            );
+                          },
+                        )
+                      : const Icon(Icons.person, size: 45, color: Colors.white),
+                ),
+              ),
             ),
             const SizedBox(height: 12),
-            Text(user.email ?? '', style: theme.textTheme.bodyMedium),
+            Text(
+              user.email ?? '',
+              style: theme.textTheme.bodyMedium,
+              overflow: TextOverflow.ellipsis,
+            ),
             const SizedBox(height: 24),
 
-            // Username field
+            // 🔹 Display Name
             TextField(
               controller: nameController,
               decoration: InputDecoration(
@@ -155,7 +178,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Workout goal field
+            // 🔹 Workout Goal
             TextField(
               controller: goalController,
               keyboardType: TextInputType.number,
@@ -168,13 +191,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Save changes
+            // 🔹 Save Changes Button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _isSaving ? null : _updateProfile,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: Colors.white, // ✅ white text
                   padding: const EdgeInsets.symmetric(
                     vertical: 14,
                     horizontal: 24,
@@ -182,6 +206,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
+                  textStyle: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 child: _isSaving
                     ? const CircularProgressIndicator(color: Colors.white)
@@ -191,11 +216,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             const Spacer(),
 
-            // Logout
+            // 🔹 Logout Button
             ElevatedButton(
               onPressed: _logout,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white, // ✅ white text
                 padding: const EdgeInsets.symmetric(
                   vertical: 14,
                   horizontal: 24,
@@ -203,6 +229,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
+                textStyle: const TextStyle(fontWeight: FontWeight.bold),
               ),
               child: const Text("Logout"),
             ),

@@ -15,6 +15,7 @@ import 'group_options_modal.dart';
 import 'workout_modal.dart';
 import 'add_friend_modal.dart';
 import 'group_invite_modal.dart';
+import 'package:intl/intl.dart';
 
 class DashboardHomeContent extends StatefulWidget {
   const DashboardHomeContent({super.key});
@@ -59,16 +60,17 @@ class _DashboardHomeContentState extends State<DashboardHomeContent> {
         .collection('groups')
         .where('memberIds', arrayContains: userId)
         .snapshots()
-        .map(
-          (snapshot) => snapshot.docs.map((doc) {
+        .map((snapshot) {
+          return snapshot.docs.map((doc) {
             final g = doc.data();
             return Group(
               id: doc.id,
               name: g['name'] ?? '',
               memberIds: List<String>.from(g['memberIds'] ?? []),
+              ownerId: g['ownerId'], // ✅ include this safely
             );
-          }).toList(),
-        );
+          }).toList();
+        });
   }
 
   // 🔹 UI BUILD
@@ -349,53 +351,95 @@ class _DashboardHomeContentState extends State<DashboardHomeContent> {
     );
   }
 
-  // 🔹 Group Card (with delete option)
+  // 🔹 Group Card (with stats, delete/leave, and modal)
   Widget _groupCard(BuildContext context, Group group) {
     final theme = Theme.of(context);
     final user = FirebaseAuth.instance.currentUser!;
     final db = FirebaseFirestore.instance;
 
+    final isOwner =
+        group.ownerId == user.uid; // requires ownerId field in your group docs
+
+    // --- Helpers ----------------------------------------------------------
+
+    Future<Map<String, dynamic>> _getGroupStats() async {
+      final members = group.memberIds;
+      if (members.isEmpty) {
+        return {'avgScore': 0.0, 'goalMetCount': 0, 'totalMembers': 0};
+      }
+
+      final userDocs = await db
+          .collection('users')
+          .where(FieldPath.documentId, whereIn: members)
+          .get();
+
+      int totalScore = 0;
+      int goalMetCount = 0;
+      final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+      for (final doc in userDocs.docs) {
+        final data = doc.data();
+        final uid = doc.id;
+        final goal = data['goalMinutes'] ?? 0;
+        final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+        final score = (data['score'] ?? 0) as int;
+        totalScore += score;
+
+        final workoutDoc = await db
+            .collection('workouts')
+            .doc('${uid}_$today')
+            .get();
+        if (workoutDoc.exists) {
+          final w = workoutDoc.data()!;
+          final mins = w['totalMinutes'] ?? 0;
+          if (goal > 0 && mins >= goal) {
+            goalMetCount++;
+          }
+        }
+      }
+
+      final avgScore = members.isNotEmpty ? (totalScore / members.length) : 0.0;
+      return {
+        'avgScore': avgScore,
+        'goalMetCount': goalMetCount,
+        'totalMembers': members.length,
+      };
+    }
+
     Future<void> _deleteGroup() async {
       final confirm = await showDialog<bool>(
         context: context,
-        builder: (ctx) {
-          return AlertDialog(
-            title: const Text('Delete Group'),
-            content: Text(
-              'Are you sure you want to delete "${group.name}"? This action cannot be undone.',
+        builder: (ctx) => AlertDialog(
+          title: const Text('Delete Group'),
+          content: Text('Delete "${group.name}" permanently?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Cancel'),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
               ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.redAccent,
-                ),
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Delete'),
-              ),
-            ],
-          );
-        },
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Delete'),
+            ),
+          ],
+        ),
       );
 
       if (confirm != true) return;
 
       try {
-        // 🔥 Delete subcollection (invitations)
         final invites = await db
             .collection('groups')
             .doc(group.id)
             .collection('invitations')
             .get();
-
         for (final doc in invites.docs) {
           await doc.reference.delete();
         }
-
-        // 🔥 Delete main group
         await db.collection('groups').doc(group.id).delete();
 
         if (context.mounted) {
@@ -403,84 +447,248 @@ class _DashboardHomeContentState extends State<DashboardHomeContent> {
             SnackBar(content: Text('Group "${group.name}" deleted ✅')),
           );
         }
-
-        setState(() {}); // Refresh list
+        setState(() {});
       } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Error deleting group: $e')));
-        }
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error deleting group: $e')));
       }
     }
 
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 🔹 Header Row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    Future<void> _leaveGroup() async {
+      try {
+        await db.collection('groups').doc(group.id).update({
+          'memberIds': FieldValue.arrayRemove([user.uid]),
+        });
+        if (context.mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('You left ${group.name} 🚪')));
+        }
+        setState(() {});
+      } catch (e) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error leaving group: $e')));
+      }
+    }
+
+    Future<void> _showGroupDetails() async {
+      final theme = Theme.of(context);
+      final stats = await _getGroupStats();
+      final db = FirebaseFirestore.instance;
+      final currentUser = FirebaseAuth.instance.currentUser!;
+
+      await showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: theme.colorScheme.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text('${group.name} — Today’s Performance'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: Text(
-                    group.name,
-                    style: theme.textTheme.bodyMedium!.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                Text('Average Score: ${stats['avgScore'].toStringAsFixed(1)}'),
+                Text(
+                  'Goals Met: ${stats['goalMetCount']}/${stats['totalMembers']}',
                 ),
-                // Delete button (visible only if user is in group or admin)
-                IconButton(
-                  icon: const Icon(
-                    Icons.delete_outline,
-                    color: Colors.redAccent,
-                  ),
-                  tooltip: 'Delete Group',
-                  onPressed: _deleteGroup,
+                const SizedBox(height: 16),
+                const Divider(),
+
+                // 🔹 Members list
+                FutureBuilder(
+                  future: db
+                      .collection('users')
+                      .where(FieldPath.documentId, whereIn: group.memberIds)
+                      .get(),
+                  builder: (context, snap) {
+                    if (!snap.hasData) {
+                      return const Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: CircularProgressIndicator(),
+                      );
+                    }
+
+                    final members = snap.data!.docs;
+                    return Column(
+                      children: members.map((m) {
+                        final data = m.data() as Map<String, dynamic>;
+                        final username = data['username'] ?? 'Unknown';
+                        final name = data['name'] ?? username;
+                        final score = data['score'] ?? 0;
+
+                        // Skip current user from message list
+                        if (m.id == currentUser.uid) return const SizedBox();
+
+                        return ListTile(
+                          dense: true,
+                          title: Text(name),
+                          subtitle: Text('Score: $score'),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.message_outlined),
+                            tooltip: 'Message $username',
+                            onPressed: () async {
+                              final chosen = await showMessageDialog(
+                                context,
+                                (messages.toList()..shuffle()).first,
+                              );
+                              if (chosen != null && chosen.isNotEmpty) {
+                                await db.collection('messages').add({
+                                  'from': currentUser.uid,
+                                  'to': username,
+                                  'text': chosen,
+                                  'timestamp': FieldValue.serverTimestamp(),
+                                });
+
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text("Sent to $name: $chosen"),
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    );
+                  },
                 ),
               ],
             ),
-
-            const SizedBox(height: 4),
-            Text(group.memberIds.join(', '), style: theme.textTheme.bodySmall),
-            const SizedBox(height: 8),
-
-            // 🔹 Stats Row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Avg Score: 9.5', style: theme.textTheme.bodyMedium),
-                Row(
-                  children: [
-                    Text(
-                      'Today: 0/${group.memberIds.length}',
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: const Icon(Icons.person_add_alt_1),
-                      tooltip: "Invite Friends",
-                      onPressed: () async {
-                        final friends = await getFriendsStream(user.uid).first;
-                        await showGroupInviteModal(
-                          context,
-                          group.id,
-                          group.name,
-                          group.memberIds,
-                          friends,
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Close'),
             ),
           ],
+        ),
+      );
+    }
+
+    // --- Card UI ----------------------------------------------------------
+
+    return GestureDetector(
+      onTap: _showGroupDetails,
+      child: Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header Row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      group.name,
+                      style: theme.textTheme.bodyMedium!.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      isOwner ? Icons.delete_outline : Icons.exit_to_app,
+                      color: isOwner ? Colors.redAccent : Colors.orangeAccent,
+                    ),
+                    tooltip: isOwner ? 'Delete Group' : 'Leave Group',
+                    onPressed: isOwner ? _deleteGroup : _leaveGroup,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+
+              // Member names (usernames, ellipsized)
+              FutureBuilder<QuerySnapshot>(
+                future: db
+                    .collection('users')
+                    .where(FieldPath.documentId, whereIn: group.memberIds)
+                    .get(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 4),
+                      child: LinearProgressIndicator(minHeight: 2),
+                    );
+                  }
+
+                  final users = snapshot.data!.docs;
+                  final usernames = users.map((u) {
+                    final data = u.data() as Map<String, dynamic>;
+                    return data['username'] ?? data['name'] ?? 'User';
+                  }).toList();
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      usernames.join(', '),
+                      style: theme.textTheme.bodySmall,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  );
+                },
+              ),
+
+              // Stats row
+              FutureBuilder<Map<String, dynamic>>(
+                future: _getGroupStats(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: LinearProgressIndicator(minHeight: 2),
+                    );
+                  }
+
+                  final stats = snapshot.data!;
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Avg Score: ${stats['avgScore'].toStringAsFixed(1)}',
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                      Row(
+                        children: [
+                          Text(
+                            'Today: ${stats['goalMetCount']}/${stats['totalMembers']}',
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.person_add_alt_1),
+                            tooltip: "Invite Friends",
+                            onPressed: () async {
+                              final friends = await getFriendsStream(
+                                user.uid,
+                              ).first;
+                              await showGroupInviteModal(
+                                context,
+                                group.id,
+                                group.name,
+                                group.memberIds,
+                                friends,
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

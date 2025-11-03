@@ -8,6 +8,7 @@ Future<String?> showMessageDialog(BuildContext context, String initial) async {
   return showDialog<String>(
     context: context,
     builder: (ctx) {
+      final theme = Theme.of(context);
       return AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text(
@@ -49,9 +50,16 @@ Future<String?> showMessageDialog(BuildContext context, String initial) async {
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primary,
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: Colors.white, // ✅ Fix: make “Send” visible
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            child: const Text('Send'),
+            child: const Text(
+              'Send',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       );
