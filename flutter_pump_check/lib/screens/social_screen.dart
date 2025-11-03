@@ -13,7 +13,7 @@ class _SocialScreenState extends State<SocialScreen> {
   final user = FirebaseAuth.instance.currentUser!;
   final db = FirebaseFirestore.instance;
 
-  // 🔹 Stream for pending group invites
+  // 🔹 Pending group invites
   Stream<QuerySnapshot> getGroupInvites() {
     return db
         .collection('group_invites')
@@ -22,7 +22,7 @@ class _SocialScreenState extends State<SocialScreen> {
         .snapshots();
   }
 
-  // 🔹 Stream for friend requests (optional)
+  // 🔹 Pending friend requests
   Stream<QuerySnapshot> getFriendRequests() {
     return db
         .collection('friend_requests')
@@ -31,26 +31,102 @@ class _SocialScreenState extends State<SocialScreen> {
         .snapshots();
   }
 
+  // 🔹 Accept a group invite
   Future<void> acceptInvite(DocumentSnapshot doc) async {
-    final data = doc.data() as Map<String, dynamic>;
-    final groupId = data['groupId'];
-    final userId = user.uid;
+    debugPrint("🔥 Accepting group invite ${doc.id}");
+    try {
+      final data = doc.data() as Map<String, dynamic>;
+      final groupId = data['groupId'];
+      final userId = user.uid;
 
-    final groupRef = db.collection('groups').doc(groupId);
-    await db.runTransaction((t) async {
-      final snap = await t.get(groupRef);
-      final members = List<String>.from(snap['memberIds'] ?? []);
-      if (!members.contains(userId)) members.add(userId);
-      t.update(groupRef, {'memberIds': members});
-      t.update(doc.reference, {'status': 'accepted'});
-    });
+      if (groupId == null) {
+        debugPrint("⚠️ Missing groupId on invite ${doc.id}");
+        return;
+      }
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Joined ${data['groupName']}!')));
+      final groupRef = db.collection('groups').doc(groupId);
+      await db.runTransaction((t) async {
+        final snap = await t.get(groupRef);
+        final members = List<String>.from(snap['memberIds'] ?? []);
+        if (!members.contains(userId)) members.add(userId);
+        t.update(groupRef, {'memberIds': members});
+        t.update(doc.reference, {'status': 'accepted'});
+      });
+
+      debugPrint("✅ Added $userId to group $groupId successfully");
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Joined ${data['groupName']}!')));
+    } catch (e, st) {
+      debugPrint("❌ Error accepting group invite: $e\n$st");
+    }
   }
 
+  // 🔹 Decline a group invite
   Future<void> declineInvite(DocumentSnapshot doc) async {
+    await doc.reference.update({'status': 'declined'});
+  }
+
+  // 🔹 Accept friend request
+  Future<void> acceptFriendRequest(DocumentSnapshot doc) async {
+    debugPrint("🔥 Starting acceptFriendRequest for ${doc.id}");
+    try {
+      final data = doc.data() as Map<String, dynamic>?;
+      if (data == null) {
+        debugPrint("⚠️ No data in document ${doc.id}");
+        return;
+      }
+
+      final fromUserId = data['fromUserId'];
+      final toUserId = data['toUserId'];
+      debugPrint("📦 Request data: $data");
+
+      if (fromUserId == null || toUserId == null) {
+        debugPrint("⚠️ Missing fromUserId or toUserId fields");
+        return;
+      }
+
+      // Make sure these users exist
+      final fromUserDoc = await db.collection('users').doc(fromUserId).get();
+      final toUserDoc = await db.collection('users').doc(toUserId).get();
+
+      debugPrint("👤 FromUser exists: ${fromUserDoc.exists}");
+      debugPrint("👤 ToUser exists: ${toUserDoc.exists}");
+
+      if (!fromUserDoc.exists || !toUserDoc.exists) {
+        debugPrint("❌ One or both users don't exist in Firestore");
+        return;
+      }
+
+      // Perform updates
+      await db.runTransaction((txn) async {
+        txn.update(doc.reference, {'status': 'accepted'});
+        txn.update(db.collection('users').doc(fromUserId), {
+          'friends': FieldValue.arrayUnion([toUserId]),
+        });
+        txn.update(db.collection('users').doc(toUserId), {
+          'friends': FieldValue.arrayUnion([fromUserId]),
+        });
+      });
+
+      debugPrint(
+        "✅ Transaction committed successfully for $fromUserId <-> $toUserId",
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("You are now friends with ${data['fromUserName']}!"),
+        ),
+      );
+    } catch (e, st) {
+      debugPrint("❌ Error in acceptFriendRequest: $e\n$st");
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error adding friend: $e")));
+    }
+  }
+
+  // 🔹 Decline friend request
+  Future<void> declineFriendRequest(DocumentSnapshot doc) async {
     await doc.reference.update({'status': 'declined'});
   }
 
@@ -70,110 +146,168 @@ class _SocialScreenState extends State<SocialScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Friends & Groups')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _sectionHeader(context, "Pending Group Invites"),
-            StreamBuilder<QuerySnapshot>(
-              stream: getGroupInvites(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                final invites = snapshot.data!.docs;
-                if (invites.isEmpty) {
-                  return const Text("No pending group invites.");
-                }
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _sectionHeader(context, "Pending Group Invites"),
+              StreamBuilder<QuerySnapshot>(
+                stream: getGroupInvites(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  final invites = snapshot.data!.docs;
+                  if (invites.isEmpty) {
+                    return const Text("No pending group invites.");
+                  }
 
-                return Column(
-                  children: invites.map((doc) {
-                    final d = doc.data() as Map<String, dynamic>;
-                    return Card(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ListTile(
-                        title: Text(d['groupName'] ?? ''),
-                        subtitle: Text('From ${d['fromUserName'] ?? ''}'),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(
-                                Icons.check_circle,
-                                color: Colors.green,
-                              ),
-                              onPressed: () => acceptInvite(doc),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.cancel, color: Colors.red),
-                              onPressed: () => declineInvite(doc),
-                            ),
-                          ],
+                  return Column(
+                    children: invites.map((doc) {
+                      final d = doc.data() as Map<String, dynamic>;
+                      return Card(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      ),
-                    );
-                  }).toList(),
-                );
-              },
-            ),
-            const SizedBox(height: 20),
-            _sectionHeader(context, "Friend Requests"),
-            StreamBuilder<QuerySnapshot>(
-              stream: getFriendRequests(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                final requests = snapshot.data!.docs;
-                if (requests.isEmpty) {
-                  return const Text("No friend requests yet.");
-                }
-                return Column(
-                  children: requests.map((doc) {
-                    final d = doc.data() as Map<String, dynamic>;
-                    return Card(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ListTile(
-                        title: Text(d['fromUserName'] ?? ''),
-                        subtitle: const Text('Wants to be friends'),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(
-                                Icons.check_circle,
-                                color: Colors.green,
+                        child: ListTile(
+                          title: Text(d['groupName'] ?? ''),
+                          subtitle: Text('From ${d['fromUserName'] ?? ''}'),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.check_circle,
+                                  color: Colors.green,
+                                ),
+                                onPressed: () => acceptInvite(doc),
                               ),
-                              onPressed: () async {
-                                await doc.reference.update({
-                                  'status': 'accepted',
-                                });
-                              },
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.cancel, color: Colors.red),
-                              onPressed: () async {
-                                await doc.reference.update({
-                                  'status': 'declined',
-                                });
-                              },
-                            ),
-                          ],
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.cancel,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () => declineInvite(doc),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  }).toList(),
-                );
-              },
-            ),
-          ],
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 20),
+              _sectionHeader(context, "Friend Requests"),
+              StreamBuilder<QuerySnapshot>(
+                stream: getFriendRequests(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  final requests = snapshot.data!.docs;
+                  if (requests.isEmpty) {
+                    return const Text("No friend requests yet.");
+                  }
+
+                  return Column(
+                    children: requests.map((doc) {
+                      final d = doc.data() as Map<String, dynamic>;
+                      return Card(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: ListTile(
+                          title: Text(d['fromUserName'] ?? ''),
+                          subtitle: const Text('Wants to be friends'),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.check_circle,
+                                  color: Colors.green,
+                                ),
+                                onPressed: () async {
+                                  debugPrint(
+                                    "✅ Accept button pressed for ${doc.id}",
+                                  );
+                                  await acceptFriendRequest(doc);
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.cancel,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () => declineFriendRequest(doc),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 20),
+              _sectionHeader(context, "My Friends"),
+              StreamBuilder<DocumentSnapshot>(
+                stream: db.collection('users').doc(user.uid).snapshots(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData)
+                    return const CircularProgressIndicator();
+                  final data =
+                      snapshot.data!.data() as Map<String, dynamic>? ?? {};
+                  final friends = List<String>.from(data['friends'] ?? []);
+                  if (friends.isEmpty)
+                    return const Text("You have no friends yet.");
+
+                  return FutureBuilder<QuerySnapshot>(
+                    future: db
+                        .collection('users')
+                        .where(FieldPath.documentId, whereIn: friends)
+                        .get(),
+                    builder: (context, snap) {
+                      if (!snap.hasData)
+                        return const CircularProgressIndicator();
+                      final friendDocs = snap.data!.docs;
+                      return Column(
+                        children: friendDocs.map((f) {
+                          final fd = f.data() as Map<String, dynamic>;
+                          return Card(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: ListTile(
+                              leading: fd['photoUrl'] != null
+                                  ? CircleAvatar(
+                                      backgroundImage: NetworkImage(
+                                        fd['photoUrl'],
+                                      ),
+                                    )
+                                  : const CircleAvatar(
+                                      child: Icon(Icons.person),
+                                    ),
+                              title: Text(fd['name'] ?? 'Unknown'),
+                              subtitle: Text('@${fd['username'] ?? ''}'),
+                            ),
+                          );
+                        }).toList(),
+                      );
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

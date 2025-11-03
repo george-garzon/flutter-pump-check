@@ -349,9 +349,71 @@ class _DashboardHomeContentState extends State<DashboardHomeContent> {
     );
   }
 
-  // 🔹 Group Card
+  // 🔹 Group Card (with delete option)
   Widget _groupCard(BuildContext context, Group group) {
     final theme = Theme.of(context);
+    final user = FirebaseAuth.instance.currentUser!;
+    final db = FirebaseFirestore.instance;
+
+    Future<void> _deleteGroup() async {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) {
+          return AlertDialog(
+            title: const Text('Delete Group'),
+            content: Text(
+              'Are you sure you want to delete "${group.name}"? This action cannot be undone.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                ),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Delete'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (confirm != true) return;
+
+      try {
+        // 🔥 Delete subcollection (invitations)
+        final invites = await db
+            .collection('groups')
+            .doc(group.id)
+            .collection('invitations')
+            .get();
+
+        for (final doc in invites.docs) {
+          await doc.reference.delete();
+        }
+
+        // 🔥 Delete main group
+        await db.collection('groups').doc(group.id).delete();
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Group "${group.name}" deleted ✅')),
+          );
+        }
+
+        setState(() {}); // Refresh list
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error deleting group: $e')));
+        }
+      }
+    }
+
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
@@ -359,15 +421,36 @@ class _DashboardHomeContentState extends State<DashboardHomeContent> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              group.name,
-              style: theme.textTheme.bodyMedium!.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+            // 🔹 Header Row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    group.name,
+                    style: theme.textTheme.bodyMedium!.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                // Delete button (visible only if user is in group or admin)
+                IconButton(
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.redAccent,
+                  ),
+                  tooltip: 'Delete Group',
+                  onPressed: _deleteGroup,
+                ),
+              ],
             ),
+
             const SizedBox(height: 4),
             Text(group.memberIds.join(', '), style: theme.textTheme.bodySmall),
             const SizedBox(height: 8),
+
+            // 🔹 Stats Row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -383,8 +466,6 @@ class _DashboardHomeContentState extends State<DashboardHomeContent> {
                       icon: const Icon(Icons.person_add_alt_1),
                       tooltip: "Invite Friends",
                       onPressed: () async {
-                        // Fetch your friends
-                        final user = FirebaseAuth.instance.currentUser!;
                         final friends = await getFriendsStream(user.uid).first;
                         await showGroupInviteModal(
                           context,

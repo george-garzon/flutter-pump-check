@@ -15,7 +15,7 @@ Future<void> showAddFriendModal(BuildContext context) async {
       content: TextField(
         controller: usernameController,
         decoration: const InputDecoration(
-          labelText: "Enter friend's username (e.g. @kristen)",
+          labelText: "Enter friend's username (e.g. kristen)",
           border: OutlineInputBorder(),
         ),
       ),
@@ -34,14 +34,16 @@ Future<void> showAddFriendModal(BuildContext context) async {
             if (username.isEmpty || user == null) return;
 
             try {
-              // 🔹 Find the user by username
-              final result = await FirebaseFirestore.instance
+              final db = FirebaseFirestore.instance;
+
+              // 🔹 Find user by username
+              final friendQuery = await db
                   .collection('users')
                   .where('username', isEqualTo: username)
                   .limit(1)
                   .get();
 
-              if (result.docs.isEmpty) {
+              if (friendQuery.docs.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text("No user found with that username."),
@@ -50,38 +52,60 @@ Future<void> showAddFriendModal(BuildContext context) async {
                 return;
               }
 
-              final friendDoc = result.docs.first;
+              final friendDoc = friendQuery.docs.first;
               final friendId = friendDoc.id;
+              final friendData = friendDoc.data();
 
-              // 🔹 Update both users' friend lists
-              final currentUserRef = FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(user.uid);
-              final friendUserRef = FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(friendId);
+              // 🔹 Prevent self-add
+              if (friendId == user.uid) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("You can’t add yourself!")),
+                );
+                return;
+              }
 
-              await FirebaseFirestore.instance.runTransaction((txn) async {
-                txn.update(currentUserRef, {
-                  'friends': FieldValue.arrayUnion([friendId]),
-                });
-                txn.update(friendUserRef, {
-                  'friends': FieldValue.arrayUnion([user.uid]),
-                });
+              // 🔹 Check if a request already exists
+              final existingRequest = await db
+                  .collection('friend_requests')
+                  .where('fromUserId', isEqualTo: user.uid)
+                  .where('toUserId', isEqualTo: friendId)
+                  .where('status', isEqualTo: 'pending')
+                  .limit(1)
+                  .get();
+
+              if (existingRequest.docs.isNotEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Friend request already sent.")),
+                );
+                return;
+              }
+
+              // 🔹 Create friend request doc
+              await db.collection('friend_requests').add({
+                'fromUserId': user.uid,
+                'fromUserName': user.displayName ?? user.email ?? 'Unknown',
+                'toUserId': friendId,
+                'toUserName': friendData['username'] ?? '',
+                'status': 'pending',
+                'timestamp': FieldValue.serverTimestamp(),
               });
 
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("You are now friends with ${username}")),
+                SnackBar(
+                  content: Text(
+                    "Friend request sent to ${friendData['username']} ✅",
+                  ),
+                ),
               );
             } catch (e) {
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("Error adding friend: $e")),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text("Error: $e")));
             }
           },
-          child: const Text("Add Friend"),
+          child: const Text("Send Request"),
         ),
       ],
     ),
