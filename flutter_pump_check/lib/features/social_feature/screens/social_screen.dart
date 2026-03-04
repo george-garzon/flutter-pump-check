@@ -15,8 +15,24 @@ class SocialScreen extends StatefulWidget {
 class _SocialScreenState extends State<SocialScreen> {
   final user = FirebaseAuth.instance.currentUser!;
   final db = FirebaseFirestore.instance;
+  String? myUsername;
 
-  // 🔹 Pending group invites
+  @override
+  void initState() {
+    super.initState();
+    loadUsername();
+  }
+
+  Future<void> loadUsername() async {
+    final doc = await db.collection('users').doc(user.uid).get();
+    print("User UID: ${user.uid}");
+    final data = doc.data();
+
+    setState(() {
+      myUsername = data?['username'];
+      print("Username: ${myUsername}");    });
+  }
+  // Pending group invites
   Stream<QuerySnapshot> getGroupInvites() {
     return db
         .collection('group_invites')
@@ -25,7 +41,7 @@ class _SocialScreenState extends State<SocialScreen> {
         .snapshots();
   }
 
-  // 🔹 Pending friend requests
+  // Pending friend requests
   Stream<QuerySnapshot> getFriendRequests() {
     return db
         .collection('friend_requests')
@@ -34,7 +50,20 @@ class _SocialScreenState extends State<SocialScreen> {
         .snapshots();
   }
 
-  // 🔹 Accept a group invite
+  // Messages sent to me
+  Stream<QuerySnapshot> getMessagesToMe() {
+    if (myUsername == null) {
+      return const Stream.empty();
+    }
+
+    return db
+        .collection('messages')
+        .where('to', isEqualTo: myUsername)
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
+
+  // Accept a group invite
   Future<void> acceptInvite(DocumentSnapshot doc) async {
     debugPrint("🔥 Accepting group invite ${doc.id}");
     try {
@@ -333,6 +362,63 @@ class _SocialScreenState extends State<SocialScreen> {
                         }).toList(),
                       );
                     },
+                  );
+                },
+              ),
+
+
+              const SizedBox(height: 20),
+
+              SectionHeader(
+                title: "Messages",
+              ),
+
+              StreamBuilder<QuerySnapshot>(
+                stream: getMessagesToMe(),
+                builder: (context, snapshot) {
+
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    print("waiting for messages...");
+                    return const CircularProgressIndicator();
+                  }
+
+                  final messages = snapshot.data?.docs ?? [];
+
+                  print("messages found: ${messages.length}");
+
+                  if (messages.isEmpty) {
+                    return Text(
+                      "No messages yet.",
+                      style: TextStyle(color: colors.gray),
+                    );
+                  }
+
+                  return Column(
+                    children: messages.map((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+
+                      return Card(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: ListTile(
+                          leading: const CircleAvatar(
+                            child: Icon(Icons.mail),
+                          ),
+                          title: Text(data['text'] ?? ''),
+                          subtitle: Text("From ${data['from'] ?? ''}"),
+                          trailing: Text(
+                            data['timestamp'] != null
+                                ? (data['timestamp'] as Timestamp)
+                                .toDate()
+                                .toString()
+                                .substring(0, 16)
+                                : '',
+                            style: TextStyle(fontSize: 12, color: colors.gray),
+                          ),
+                        ),
+                      );
+                    }).toList(),
                   );
                 },
               ),
