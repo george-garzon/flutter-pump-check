@@ -4,7 +4,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_pump_check/theme/theme.dart';
 import 'package:intl/intl.dart';
 
+import '../../../models/friend.dart';
 import '../../../models/group.dart';
+import '../../../screens/group_invite_modal.dart';
 import '../../../screens/message_dialog.dart';
 
 class GroupCard extends StatefulWidget {
@@ -27,6 +29,34 @@ class _GroupCardState extends State<GroupCard> {
   User? get user => FirebaseAuth.instance.currentUser;
 
   bool get isOwner => widget.group.ownerId == user?.uid;
+
+  Future<List<Friend>> _getFriends() async {
+    if (user == null) return [];
+
+    final userDoc = await db.collection('users').doc(user!.uid).get();
+    final data = userDoc.data();
+
+    if (data == null || data['friends'] == null) return [];
+
+    final friendIds = List<String>.from(data['friends']);
+
+    if (friendIds.isEmpty) return [];
+
+    final friendsSnap = await db
+        .collection('users')
+        .where(FieldPath.documentId, whereIn: friendIds.take(10).toList())
+        .get();
+
+    return friendsSnap.docs.map((doc) {
+      final f = doc.data();
+      return Friend(
+        name: f['name'] ?? '',
+        username: f['username'] ?? '',
+        score: "${f['score'] ?? 0} 🏅",
+        completion: 0.0,
+      );
+    }).toList();
+  }
 
   Future<Map<String, dynamic>> _getGroupStats() async {
     final members = widget.group.memberIds.take(10).toList();
@@ -278,6 +308,22 @@ class _GroupCardState extends State<GroupCard> {
                         fontSize: 18,
                       )
                     ),
+                  ),
+                  // Invite button
+                  IconButton(
+                    icon: const Icon(Icons.person_add_alt_1),
+                    tooltip: "Invite Friends",
+                    onPressed: () async {
+                      final friends = await _getFriends();
+
+                      await showGroupInviteModal(
+                        context,
+                        widget.group.id,
+                        widget.group.name,
+                        widget.group.memberIds,
+                        friends,
+                      );
+                    },
                   ),
                   IconButton(
                     icon: Icon(

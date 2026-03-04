@@ -89,7 +89,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         'createdAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-      if (mounted) Navigator.pushReplacementNamed(context, '/dashboard');
+      // if (mounted) Navigator.pushReplacementNamed(context, '/dashboard');
     } catch (e) {
       ScaffoldMessenger.of(
         context,

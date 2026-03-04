@@ -33,14 +33,21 @@ class AuthService {
   }
 
   Future<void> _saveUser(User user) async {
-    await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-      'uid': user.uid,
-      'name': user.displayName ?? '',
-      'email': user.email ?? '',
-      'photoUrl': user.photoURL ?? '',
-      'goalMinutes': 45,
-      'score': 0,
-      'joinedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    final userRef =
+    FirebaseFirestore.instance.collection('users').doc(user.uid);
+
+    final doc = await userRef.get();
+
+    if (!doc.exists) {
+      await userRef.set({
+        'uid': user.uid,
+        'name': user.displayName ?? '',
+        'email': user.email ?? '',
+        'photoUrl': user.photoURL ?? '',
+        'goalMinutes': null, // onboarding must set this
+        'score': 0,
+        'joinedAt': FieldValue.serverTimestamp(),
+      });
+    }
   }
 }

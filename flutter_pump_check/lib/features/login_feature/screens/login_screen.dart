@@ -22,11 +22,6 @@ class LoginScreen extends ConsumerWidget {
             onPressed: () async {
               try {
                 await ref.read(authServiceProvider).signInWithGoogle();
-
-                if (context.mounted) {
-                  Navigator.pushReplacementNamed(context, '/dashboard');
-                }
-
               } catch (e) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('Login failed: $e')),

@@ -6,81 +6,61 @@ import '../features/login_feature/screens/login_screen.dart';
 import '../features/dashboard_feature/screens/dashboard_screen.dart';
 import 'onboarding_screen.dart';
 
-class AuthGate extends StatefulWidget {
+class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
   @override
-  State<AuthGate> createState() => _AuthGateState();
-}
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, authSnapshot) {
 
-class _AuthGateState extends State<AuthGate> {
-  bool _loading = true;
-  User? _user;
-  bool _needsOnboarding = false;
-
-  @override
-  void initState() {
-    super.initState();
-
-    // Listen to auth state changes once
-    FirebaseAuth.instance.authStateChanges().listen((user) async {
-      if (user == null) {
-        setState(() {
-          _user = null;
-          _loading = false;
-        });
-        return;
-      }
-
-      // Logged in: check Firestore for onboarding completion
-      try {
-        final doc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .get();
-
-        if (!doc.exists) {
-          _needsOnboarding = true;
-        } else {
-          final data = doc.data() ?? {};
-          final username = data['username'];
-          final goalMinutes = data['goalMinutes'];
-          _needsOnboarding =
-              username == null || username == '' || goalMinutes == null;
+        if (authSnapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
 
-        setState(() {
-          _user = user;
-          _loading = false;
-        });
-      } catch (e) {
-        debugPrint("AuthGate Firestore check error: $e");
-        setState(() {
-          _user = user;
-          _needsOnboarding = true;
-          _loading = false;
-        });
-      }
-    });
-  }
+        final user = authSnapshot.data;
 
-  @override
-  Widget build(BuildContext context) {
-    if (_loading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
+        if (user == null) {
+          return const LoginScreen();
+        }
 
-    // Not signed in
-    if (_user == null) {
-      return const LoginScreen();
-    }
+        return FutureBuilder<DocumentSnapshot>(
+          future: FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get(),
+          builder: (context, userSnapshot) {
 
-    // Signed in but missing info
-    if (_needsOnboarding) {
-      return const OnboardingScreen();
-    }
+            if (!userSnapshot.hasData) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
 
-    // Fully onboarded
-    return const DashboardScreen();
+            final doc = userSnapshot.data!;
+
+            if (!doc.exists) {
+              return const OnboardingScreen();
+            }
+
+            final data = doc.data() as Map<String, dynamic>;
+            final username = data['username'];
+            final goalMinutes = data['goalMinutes'];
+
+            final needsOnboarding =
+                username == null || username == '' || goalMinutes == null;
+
+            if (needsOnboarding) {
+              return const OnboardingScreen();
+            }
+
+            return const DashboardScreen();
+          },
+        );
+      },
+    );
   }
 }
