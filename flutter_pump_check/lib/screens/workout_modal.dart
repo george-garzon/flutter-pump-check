@@ -3,7 +3,7 @@ import 'package:flutter_pump_check/theme/theme.dart';
 import '../services/workout_service.dart';
 import '../widgets/progress_ring.dart';
 
-Future<void> showWorkoutModal(BuildContext context) async {
+Future<bool> showWorkoutModal(BuildContext context) async {
   double selectedMinutes = 30; // default slider
   int todayMinutes = 0;
   int goalMinutes = 45; // You can later fetch this from Firestore 'users' doc
@@ -15,7 +15,7 @@ Future<void> showWorkoutModal(BuildContext context) async {
     todayMinutes = todayData['totalMinutes'] ?? 0;
   }
 
-  await showDialog(
+  final result = await showDialog<bool>(
     context: context,
     builder: (ctx) {
       final theme = Theme.of(ctx);
@@ -113,7 +113,7 @@ Future<void> showWorkoutModal(BuildContext context) async {
                       todayMinutes += mins;
                     });
 
-                    Navigator.pop(ctx);
+                    Navigator.pop(ctx, true);
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -130,7 +130,7 @@ Future<void> showWorkoutModal(BuildContext context) async {
 
                 // Close button
                 TextButton(
-                  onPressed: () => Navigator.pop(ctx),
+                  onPressed: () => Navigator.pop(ctx, false),
                   child: const Text("Close"),
                 ),
               ],
@@ -140,6 +140,8 @@ Future<void> showWorkoutModal(BuildContext context) async {
       );
     },
   );
+
+  return result ?? false;
 }
 
 // Small preset button widget

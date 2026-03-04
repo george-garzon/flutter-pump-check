@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pump_check/features/login_feature/screens/splash_screen.dart';
 import 'features/dashboard_feature/screens/dashboard_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -28,7 +29,7 @@ class WorkoutBuddyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Pump Check',
-      home: const AuthGate(),
+      home: const SplashScreen(),
       routes: {
         '/dashboard': (context) => const DashboardScreen(),
         '/onboarding': (context) => const OnboardingScreen(),

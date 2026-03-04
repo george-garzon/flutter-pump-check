@@ -101,8 +101,11 @@ class ProfileCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     ElevatedButton.icon(
                       onPressed: () async {
-                        await showWorkoutModal(context);
-                        onWorkoutAdded();
+                        final logged = await showWorkoutModal(context);
+
+                        if (logged == true) {
+                          onWorkoutAdded();
+                        }
                       },
                       icon: const Icon(Icons.fitness_center, size: 16),
                       label: const Text("Pump"),
