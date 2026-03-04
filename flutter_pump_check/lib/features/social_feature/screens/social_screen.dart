@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_pump_check/theme/theme.dart';
+
+import '../../dashboard_feature/widgets/section_header.dart';
 
 class SocialScreen extends StatefulWidget {
   const SocialScreen({super.key});
@@ -146,16 +149,21 @@ class _SocialScreenState extends State<SocialScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = context.theme.appColors;
+
 
     return Scaffold(
       appBar: AppBar(title: const Text('Friends & Groups')),
+      backgroundColor: colors.white,
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _sectionHeader(context, "Pending Group Invites"),
+              SectionHeader(
+                title: "Pending Group Invites",
+              ),
               StreamBuilder<QuerySnapshot>(
                 stream: getGroupInvites(),
                 builder: (context, snapshot) {
@@ -164,7 +172,12 @@ class _SocialScreenState extends State<SocialScreen> {
                   }
                   final invites = snapshot.data!.docs;
                   if (invites.isEmpty) {
-                    return const Text("No pending group invites.");
+                    return Text(
+                        "No pending group invites.",
+                        style: TextStyle(
+                          color: colors.gray
+                        ),
+                    );
                   }
 
                   return Column(
@@ -204,7 +217,9 @@ class _SocialScreenState extends State<SocialScreen> {
               ),
 
               const SizedBox(height: 20),
-              _sectionHeader(context, "Friend Requests"),
+              SectionHeader(
+                title: "Friend Requests",
+              ),
               StreamBuilder<QuerySnapshot>(
                 stream: getFriendRequests(),
                 builder: (context, snapshot) {
@@ -213,7 +228,12 @@ class _SocialScreenState extends State<SocialScreen> {
                   }
                   final requests = snapshot.data!.docs;
                   if (requests.isEmpty) {
-                    return const Text("No friend requests yet.");
+                    return Text(
+                        "No friend requests yet.",
+                        style: TextStyle(
+                            color: colors.gray
+                        ),
+                    );
                   }
 
                   return Column(
@@ -236,7 +256,7 @@ class _SocialScreenState extends State<SocialScreen> {
                                 ),
                                 onPressed: () async {
                                   debugPrint(
-                                    "✅ Accept button pressed for ${doc.id}",
+                                    "Accept button pressed for ${doc.id}",
                                   );
                                   await acceptFriendRequest(doc);
                                 },
@@ -258,7 +278,10 @@ class _SocialScreenState extends State<SocialScreen> {
               ),
 
               const SizedBox(height: 20),
-              _sectionHeader(context, "My Friends"),
+
+              SectionHeader(
+                title: "My Friends",
+              ),
               StreamBuilder<DocumentSnapshot>(
                 stream: db.collection('users').doc(user.uid).snapshots(),
                 builder: (context, snapshot) {
@@ -267,8 +290,14 @@ class _SocialScreenState extends State<SocialScreen> {
                   final data =
                       snapshot.data!.data() as Map<String, dynamic>? ?? {};
                   final friends = List<String>.from(data['friends'] ?? []);
-                  if (friends.isEmpty)
-                    return const Text("You have no friends yet.");
+                  if (friends.isEmpty) {
+                    return Text(
+                        "You have no friends yet.",
+                        style: TextStyle(
+                            color: colors.gray
+                        ),
+                    );
+                  }
 
                   return FutureBuilder<QuerySnapshot>(
                     future: db
@@ -283,6 +312,7 @@ class _SocialScreenState extends State<SocialScreen> {
                         children: friendDocs.map((f) {
                           final fd = f.data() as Map<String, dynamic>;
                           return Card(
+                            color: colors.gray,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),

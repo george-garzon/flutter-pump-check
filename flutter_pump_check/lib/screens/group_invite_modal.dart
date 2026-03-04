@@ -19,7 +19,7 @@ Future<void> showGroupInviteModal(
     builder: (ctx) {
       final theme = Theme.of(ctx);
 
-      // ✅ Use StatefulBuilder to refresh checkboxes when tapped
+      // Use StatefulBuilder to refresh checkboxes when tapped
       return StatefulBuilder(
         builder: (context, setState) {
           return AlertDialog(

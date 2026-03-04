@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_pump_check/theme/theme.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -26,7 +27,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadUserProfile();
   }
 
-  /// 🔹 Load user's current Firestore profile
+  /// Load user's current Firestore profile
   Future<void> _loadUserProfile() async {
     try {
       final doc = await FirebaseFirestore.instance
@@ -51,7 +52,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  /// 🔹 Save updated name and goal to Firestore
+  /// Save updated name and goal to Firestore
   Future<void> _updateProfile() async {
     if (_isSaving) return;
 
@@ -82,7 +83,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  /// 🔹 Log out
+  /// Log out
   Future<void> _logout() async {
     try {
       final googleSignIn = GoogleSignIn();
@@ -108,6 +109,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = context.theme.appColors;
     final photoUrl = _profilePhotoUrl;
 
     if (_isLoading) {
@@ -115,9 +117,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
+      backgroundColor: colors.white,
       appBar: AppBar(
-        title: const Text('Profile & Settings'),
+        title: Text(
+            'Profile & Settings',
+          style: TextStyle(
+            color: colors.gray
+          ),
+        ),
         backgroundColor: Colors.transparent,
         centerTitle: true,
       ),
@@ -125,7 +132,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         padding: const EdgeInsets.all(24.0),
         child: Column(
           children: [
-            // 🔹 Avatar + Email
+            // Avatar + Email
             GestureDetector(
               onTap: () async {
                 // Later you can allow image upload here
@@ -161,27 +168,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 12),
             Text(
               user.email ?? '',
-              style: theme.textTheme.bodyMedium,
-              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: colors.gray,
+                fontSize: 14,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
             const SizedBox(height: 24),
 
-            // 🔹 Display Name
+            // Display Name
             TextField(
               controller: nameController,
+              style: TextStyle(
+                color: colors.gray,
+              ),
               decoration: InputDecoration(
                 labelText: 'Display Name',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
+
               ),
             ),
             const SizedBox(height: 16),
 
-            // 🔹 Workout Goal
+            // Workout Goal
             TextField(
               controller: goalController,
               keyboardType: TextInputType.number,
+              style: TextStyle(
+                color: colors.gray,
+              ),
               decoration: InputDecoration(
                 labelText: 'Workout Goal (minutes/day)',
                 border: OutlineInputBorder(
@@ -191,14 +208,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 24),
 
-            // 🔹 Save Changes Button
+            // Save Changes Button
             SizedBox(
               width: double.infinity,
+              height: 48,
               child: ElevatedButton(
                 onPressed: _isSaving ? null : _updateProfile,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: theme.colorScheme.primary,
-                  foregroundColor: Colors.white, // ✅ white text
+                  backgroundColor: colors.gray,
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
                     vertical: 14,
                     horizontal: 24,

@@ -1,6 +1,6 @@
 import 'package:hive/hive.dart';
 
-part '../../models/weight_entry.g.dart';
+// part '../../models/weight_entry.g.dart';
 
 @HiveType(typeId: 0)
 class WeightEntry extends HiveObject {

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'add_entry_screen.dart';
-import '../widgets/weight_chart.dart';
+// import '../widgets/weight_chart.dart';
 
 class HomeScreen extends StatelessWidget {
   final uid = FirebaseAuth.instance.currentUser!.uid;
@@ -36,7 +36,7 @@ class HomeScreen extends StatelessWidget {
 
           return Column(
             children: [
-              Expanded(child: WeightChart(entries: entries)),
+              // Expanded(child: WeightChart(entries: entries)),
               Expanded(
                 child: ListView.builder(
                   itemCount: entries.length,

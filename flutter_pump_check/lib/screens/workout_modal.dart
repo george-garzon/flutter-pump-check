@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pump_check/theme/theme.dart';
 import '../services/workout_service.dart';
 import '../widgets/progress_ring.dart';
 
@@ -6,6 +7,7 @@ Future<void> showWorkoutModal(BuildContext context) async {
   double selectedMinutes = 30; // default slider
   int todayMinutes = 0;
   int goalMinutes = 45; // You can later fetch this from Firestore 'users' doc
+  final colors = context.theme.appColors;
 
   // Get today's data
   final todayData = await WorkoutService.getToday();
@@ -18,7 +20,7 @@ Future<void> showWorkoutModal(BuildContext context) async {
     builder: (ctx) {
       final theme = Theme.of(ctx);
       return AlertDialog(
-        backgroundColor: theme.colorScheme.surface,
+        backgroundColor: colors.gray,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         content: StatefulBuilder(
           builder: (ctx, setState) {

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import 'login_screen.dart';
-import 'dashboard_screen.dart';
+import '../features/login_feature/screens/login_screen.dart';
+import '../features/dashboard_feature/screens/dashboard_screen.dart';
 import 'onboarding_screen.dart';
 
 class AuthGate extends StatefulWidget {
