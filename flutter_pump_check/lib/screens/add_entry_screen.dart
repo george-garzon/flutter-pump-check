@@ -1,51 +1,86 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_pump_check/services/workout_service.dart';
 
 class AddEntryScreen extends StatefulWidget {
+  const AddEntryScreen({super.key});
+
   @override
   State<AddEntryScreen> createState() => _AddEntryScreenState();
 }
 
 class _AddEntryScreenState extends State<AddEntryScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _weightController = TextEditingController();
+  final _caloriesController = TextEditingController();
+  final _minutesController = TextEditingController();
+  bool _saving = false;
 
-  void _saveEntry() async {
-    if (_formKey.currentState!.validate()) {
-      final weight = double.parse(_weightController.text);
-      await FirebaseFirestore.instance.collection('weights').add({
-        'userId': FirebaseAuth.instance.currentUser!.uid,
-        'weight': weight,
-        'date': Timestamp.now(),
-      });
-      Navigator.pop(context);
-    }
+  Future<void> _saveEntry() async {
+    if (!_formKey.currentState!.validate() || _saving) return;
+
+    setState(() => _saving = true);
+
+    await WorkoutService.logWorkout(
+      caloriesBurned: int.parse(_caloriesController.text.trim()),
+      minutesTrained: int.parse(_minutesController.text.trim()),
+    );
+
+    if (mounted) Navigator.pop(context);
+  }
+
+  @override
+  void dispose() {
+    _caloriesController.dispose();
+    _minutesController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Weight')),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: AppBar(title: const Text('Add Workout')),
       body: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
           child: Column(
             children: [
               TextFormField(
-                controller: _weightController,
+                controller: _caloriesController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Weight (lbs)'),
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'Enter weight' : null,
+                decoration: const InputDecoration(labelText: 'Calories burned'),
+                validator: _positiveNumberValidator,
               ),
-              const SizedBox(height: 20),
-              ElevatedButton(onPressed: _saveEntry, child: const Text('Save')),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _minutesController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Minutes trained'),
+                validator: _positiveNumberValidator,
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: _saving ? null : _saveEntry,
+                  child: _saving
+                      ? const CircularProgressIndicator()
+                      : const Text('Save workout'),
+                ),
+              ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  String? _positiveNumberValidator(String? value) {
+    final number = int.tryParse(value?.trim() ?? '');
+    if (number == null || number <= 0) {
+      return 'Enter a number greater than 0';
+    }
+    return null;
   }
 }

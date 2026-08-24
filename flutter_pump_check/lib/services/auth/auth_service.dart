@@ -33,8 +33,9 @@ class AuthService {
   }
 
   Future<void> _saveUser(User user) async {
-    final userRef =
-    FirebaseFirestore.instance.collection('users').doc(user.uid);
+    final userRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid);
 
     final doc = await userRef.get();
 
@@ -44,7 +45,12 @@ class AuthService {
         'name': user.displayName ?? '',
         'email': user.email ?? '',
         'photoUrl': user.photoURL ?? '',
-        'goalMinutes': null, // onboarding must set this
+        'goalCalories': null, // onboarding must set this
+        'defaultWorkoutMinutes': 30,
+        'streakMode': 'strict',
+        'themeMode': 'dark',
+        'notificationsEnabled': true,
+        'hiddenFriends': [],
         'score': 0,
         'joinedAt': FieldValue.serverTimestamp(),
       });

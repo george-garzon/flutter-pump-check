@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../features/login_feature/screens/login_screen.dart';
 import '../features/dashboard_feature/screens/dashboard_screen.dart';
+import '../theme/app_theme_mode.dart';
 import 'onboarding_screen.dart';
 
 class AuthGate extends StatelessWidget {
@@ -14,7 +15,6 @@ class AuthGate extends StatelessWidget {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, authSnapshot) {
-
         if (authSnapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
@@ -33,7 +33,6 @@ class AuthGate extends StatelessWidget {
               .doc(user.uid)
               .get(),
           builder: (context, userSnapshot) {
-
             if (!userSnapshot.hasData) {
               return const Scaffold(
                 body: Center(child: CircularProgressIndicator()),
@@ -48,14 +47,21 @@ class AuthGate extends StatelessWidget {
 
             final data = doc.data() as Map<String, dynamic>;
             final username = data['username'];
+            final goalCalories = data['goalCalories'];
             final goalMinutes = data['goalMinutes'];
 
             final needsOnboarding =
-                username == null || username == '' || goalMinutes == null;
+                username == null ||
+                username == '' ||
+                (goalCalories == null && goalMinutes == null);
 
             if (needsOnboarding) {
               return const OnboardingScreen();
             }
+
+            appThemeModeNotifier.value = themeModeFromString(
+              data['themeMode'] as String?,
+            );
 
             return const DashboardScreen();
           },

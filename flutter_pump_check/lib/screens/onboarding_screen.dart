@@ -82,7 +82,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         'name': user.displayName ?? '',
         'email': user.email,
         'username': username,
-        'goalMinutes': goal,
+        'goalCalories': goal,
+        'defaultWorkoutMinutes': 30,
+        'streakMode': 'strict',
+        'themeMode': 'dark',
+        'notificationsEnabled': true,
+        'hiddenFriends': [],
         'score': 0,
         'friends': [],
         'groups': [],
@@ -104,7 +109,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Welcome to WorkoutBuddy")),
+      backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: AppBar(title: const Text("Welcome to Pump Check")),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Center(
@@ -115,7 +121,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    "Let's get you started 💪",
+                    "Let's get you started",
                     textAlign: TextAlign.center,
                     style: theme.textTheme.headlineSmall!.copyWith(
                       fontWeight: FontWeight.bold,
@@ -136,7 +142,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     controller: _goalController,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
-                      labelText: "Daily workout goal (minutes)",
+                      labelText: "Daily calorie goal",
+                      hintText: "e.g. 500",
                       border: OutlineInputBorder(),
                     ),
                     validator: _validateGoal,
