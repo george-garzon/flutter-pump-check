@@ -27,8 +27,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool get _isLight => Theme.of(context).brightness == Brightness.light;
   Color get _background =>
       _isLight ? ClaudePalette.cream : ClaudePalette.charcoal;
-  Color get _header =>
-      _isLight ? ClaudePalette.creamMuted : ClaudePalette.charcoalHeader;
   Color get _selectedSurface =>
       _isLight ? const Color(0xFFFFEFE5) : ClaudePalette.selectedSurface;
   Color get _surface =>
@@ -59,7 +57,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ];
 
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         bottom: false,
         child: IndexedStack(index: _selectedIndex, children: screens),
@@ -107,12 +105,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return Column(
           children: [
             _topHeader(
-              title: 'Pump Check',
+              title: 'Burn Camp',
               leading: IconButton(
                 icon: Icon(Icons.ios_share, color: _cream, size: 27),
                 onPressed: () {
                   Share.share(
-                    'I burned ${aggregate.calories} calories and trained ${aggregate.minutes} minutes in Pump Check.',
+                    'I burned ${aggregate.calories} calories and trained ${aggregate.minutes} minutes in Burn Camp.',
                   );
                 },
               ),
@@ -315,7 +313,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 icon: Icon(Icons.ios_share, color: _cream, size: 27),
                 onPressed: () {
                   Share.share(
-                    'Pump Check keeps me accountable for calories burned and workout minutes.',
+                    'Burn Camp keeps me accountable for calories burned and workout minutes.',
                   );
                 },
               ),
@@ -496,19 +494,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   SizedBox(height: 28, child: ColoredBox(color: _surface)),
                   _settingsRow('Help and feedback', '', onTap: _showHelpPage),
                   _settingsRow(
-                    'Support Pump Check',
+                    'Support Burn Camp',
                     'Premium',
                     onTap: _showSupportPage,
                   ),
                   _settingsRow(
                     'Instagram',
-                    '@pumpcheck',
+                    '@burncamp',
                     onTap: () =>
                         _showSnack('Social links are placeholders for now.'),
                   ),
                   _settingsRow(
                     'TikTok',
-                    '@pumpcheck',
+                    '@burncamp',
                     onTap: () =>
                         _showSnack('Social links are placeholders for now.'),
                   ),
@@ -519,7 +517,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onTap: () => _showInfoPage(
                       title: 'Privacy',
                       body:
-                          'Pump Check stores workout entries, goals, and settings in your account so your calorie history can sync across devices.',
+                          'Burn Camp stores workout entries, goals, and settings in your account so your calorie history can sync across devices.',
                     ),
                   ),
                   _settingsRow(
@@ -528,7 +526,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onTap: () => _showInfoPage(
                       title: 'Terms',
                       body:
-                          'Pump Check is for personal fitness tracking and friendly accountability. Manually entered workouts should reflect your best estimate.',
+                          'Burn Camp is for personal fitness tracking and friendly accountability. Manually entered workouts should reflect your best estimate.',
                     ),
                   ),
                   SizedBox(height: 22),
@@ -560,51 +558,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required Widget trailing,
     Widget? bottom,
   }) {
-    return Container(
-      color: _header,
-      child: Column(
-        children: [
-          SizedBox(
-            height: 86,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  SizedBox(width: 56, child: Center(child: leading)),
-                  Expanded(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.local_fire_department,
-                          color: _cream,
-                          size: 24,
-                        ),
-                        SizedBox(width: 8),
-                        Flexible(
-                          child: Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: _cream,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w700,
-                              fontStyle: FontStyle.italic,
-                            ),
+    return Column(
+      children: [
+        SizedBox(
+          height: 86,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                SizedBox(width: 56, child: Center(child: leading)),
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.local_fire_department,
+                        color: _cream,
+                        size: 24,
+                      ),
+                      SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: _cream,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                            fontStyle: FontStyle.italic,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  SizedBox(width: 56, child: Center(child: trailing)),
-                ],
-              ),
+                ),
+                SizedBox(width: 56, child: Center(child: trailing)),
+              ],
             ),
           ),
-          if (bottom != null) bottom,
-        ],
-      ),
+        ),
+        if (bottom != null) bottom,
+      ],
     );
   }
 
@@ -1878,7 +1873,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     onPressed: () {
                       Share.share(
-                        'Pump Check recap: ${NumberFormat.decimalPattern().format(month.calories)} calories and ${month.minutes} minutes trained this month.',
+                        'Burn Camp recap: ${NumberFormat.decimalPattern().format(month.calories)} calories and ${month.minutes} minutes trained this month.',
                       );
                     },
                     icon: const Icon(Icons.ios_share),
@@ -1895,7 +1890,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _inviteFriends() async {
     await Share.share(
-      'Join me on Pump Check — track calories burned, training minutes, and compare workouts with friends.',
+      'Join me on Burn Camp — track calories burned, training minutes, and compare workouts with friends.',
     );
   }
 
@@ -1982,7 +1977,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           SizedBox(height: 16),
           Text(
-            'Pump Check is built around intentional manual entry. Add calories burned and minutes trained after each workout. Your daily totals, goals, alerts, recaps, and leaderboard use those entries.',
+            'Burn Camp is built around intentional manual entry. Add calories burned and minutes trained after each workout. Your daily totals, goals, alerts, recaps, and leaderboard use those entries.',
             textAlign: TextAlign.center,
             style: TextStyle(color: _muted, fontSize: 18, height: 1.35),
           ),
@@ -2083,7 +2078,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             title: 'Send feedback',
             subtitle: 'Share what should be improved next.',
             icon: Icons.feedback_outlined,
-            onTap: () => Share.share('Pump Check feedback: '),
+            onTap: () => Share.share('Burn Camp feedback: '),
           ),
           SizedBox(height: 18),
           Text(
@@ -2097,14 +2092,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   void _showSupportPage() {
     _pushDetailPage(
-      title: 'Support Pump Check',
+      title: 'Support Burn Camp',
       child: ListView(
         padding: const EdgeInsets.fromLTRB(24, 36, 24, 28),
         children: [
           Icon(Icons.local_fire_department, color: _accent, size: 64),
           SizedBox(height: 18),
           Text(
-            'Enjoy Pump Check?',
+            'Enjoy Burn Camp?',
             textAlign: TextAlign.center,
             style: TextStyle(color: _cream, fontSize: 26),
           ),
@@ -2696,16 +2691,12 @@ class _DashboardDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isLight = Theme.of(context).brightness == Brightness.light;
-    final background = isLight ? ClaudePalette.cream : ClaudePalette.charcoal;
-    final header = isLight
-        ? ClaudePalette.creamMuted
-        : ClaudePalette.charcoalHeader;
     final foreground = isLight ? ClaudePalette.charcoal : ClaudePalette.cream;
 
     return Scaffold(
-      backgroundColor: background,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: header,
+        backgroundColor: Colors.transparent,
         leading: IconButton(
           icon: Icon(Icons.chevron_left, color: foreground, size: 34),
           onPressed: () => Navigator.of(context).pop(),

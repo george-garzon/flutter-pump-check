@@ -30,8 +30,10 @@ class _SocialScreenState extends State<SocialScreen> {
 
     setState(() {
       myUsername = data?['username'];
-      print("Username: ${myUsername}");    });
+      print("Username: ${myUsername}");
+    });
   }
+
   // Pending group invites
   Stream<QuerySnapshot> getGroupInvites() {
     return db
@@ -180,19 +182,16 @@ class _SocialScreenState extends State<SocialScreen> {
     final theme = Theme.of(context);
     final colors = context.theme.appColors;
 
-
     return Scaffold(
       appBar: AppBar(title: const Text('Friends & Groups')),
-      backgroundColor: colors.white,
+      backgroundColor: Colors.transparent,
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SectionHeader(
-                title: "Pending Group Invites",
-              ),
+              SectionHeader(title: "Pending Group Invites"),
               StreamBuilder<QuerySnapshot>(
                 stream: getGroupInvites(),
                 builder: (context, snapshot) {
@@ -202,10 +201,8 @@ class _SocialScreenState extends State<SocialScreen> {
                   final invites = snapshot.data!.docs;
                   if (invites.isEmpty) {
                     return Text(
-                        "No pending group invites.",
-                        style: TextStyle(
-                          color: colors.gray
-                        ),
+                      "No pending group invites.",
+                      style: TextStyle(color: colors.gray),
                     );
                   }
 
@@ -246,9 +243,7 @@ class _SocialScreenState extends State<SocialScreen> {
               ),
 
               const SizedBox(height: 20),
-              SectionHeader(
-                title: "Friend Requests",
-              ),
+              SectionHeader(title: "Friend Requests"),
               StreamBuilder<QuerySnapshot>(
                 stream: getFriendRequests(),
                 builder: (context, snapshot) {
@@ -258,10 +253,8 @@ class _SocialScreenState extends State<SocialScreen> {
                   final requests = snapshot.data!.docs;
                   if (requests.isEmpty) {
                     return Text(
-                        "No friend requests yet.",
-                        style: TextStyle(
-                            color: colors.gray
-                        ),
+                      "No friend requests yet.",
+                      style: TextStyle(color: colors.gray),
                     );
                   }
 
@@ -308,9 +301,7 @@ class _SocialScreenState extends State<SocialScreen> {
 
               const SizedBox(height: 20),
 
-              SectionHeader(
-                title: "My Friends",
-              ),
+              SectionHeader(title: "My Friends"),
               StreamBuilder<DocumentSnapshot>(
                 stream: db.collection('users').doc(user.uid).snapshots(),
                 builder: (context, snapshot) {
@@ -321,10 +312,8 @@ class _SocialScreenState extends State<SocialScreen> {
                   final friends = List<String>.from(data['friends'] ?? []);
                   if (friends.isEmpty) {
                     return Text(
-                        "You have no friends yet.",
-                        style: TextStyle(
-                            color: colors.gray
-                        ),
+                      "You have no friends yet.",
+                      style: TextStyle(color: colors.gray),
                     );
                   }
 
@@ -366,17 +355,13 @@ class _SocialScreenState extends State<SocialScreen> {
                 },
               ),
 
-
               const SizedBox(height: 20),
 
-              SectionHeader(
-                title: "Messages",
-              ),
+              SectionHeader(title: "Messages"),
 
               StreamBuilder<QuerySnapshot>(
                 stream: getMessagesToMe(),
                 builder: (context, snapshot) {
-
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     print("waiting for messages...");
                     return const CircularProgressIndicator();
@@ -402,17 +387,15 @@ class _SocialScreenState extends State<SocialScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: ListTile(
-                          leading: const CircleAvatar(
-                            child: Icon(Icons.mail),
-                          ),
+                          leading: const CircleAvatar(child: Icon(Icons.mail)),
                           title: Text(data['text'] ?? ''),
                           subtitle: Text("From ${data['from'] ?? ''}"),
                           trailing: Text(
                             data['timestamp'] != null
                                 ? (data['timestamp'] as Timestamp)
-                                .toDate()
-                                .toString()
-                                .substring(0, 16)
+                                      .toDate()
+                                      .toString()
+                                      .substring(0, 16)
                                 : '',
                             style: TextStyle(fontSize: 12, color: colors.gray),
                           ),

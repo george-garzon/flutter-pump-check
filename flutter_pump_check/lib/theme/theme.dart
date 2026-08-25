@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'claude_palette.dart';
 import '../theme/colors.dart';
@@ -18,6 +19,26 @@ class AppTheme {
           secondary: appColors.secondary,
           surface: appColors.white,
           onSurface: appColors.black,
+        ),
+        cupertinoOverrideTheme: CupertinoThemeData(
+          brightness: Brightness.light,
+          primaryColor: appColors.primary,
+          scaffoldBackgroundColor: Colors.transparent,
+          barBackgroundColor: Colors.transparent,
+          textTheme: CupertinoTextThemeData(
+            primaryColor: appColors.primary,
+            textStyle: TextStyle(color: appColors.black),
+          ),
+        ),
+        pageTransitionsTheme: const PageTransitionsTheme(
+          builders: {
+            TargetPlatform.android: ZoomPageTransitionsBuilder(),
+            TargetPlatform.fuchsia: ZoomPageTransitionsBuilder(),
+            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.linux: ZoomPageTransitionsBuilder(),
+            TargetPlatform.windows: ZoomPageTransitionsBuilder(),
+          },
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
@@ -45,7 +66,9 @@ class AppTheme {
           ),
         ),
         appBarTheme: AppBarTheme(
-          backgroundColor: appColors.white,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          scrolledUnderElevation: 0,
           titleTextStyle: AppTypography.typography.bodyLarge.copyWith(
             color: appColors.black,
             fontSize: 17,
@@ -67,22 +90,22 @@ class AppTheme {
             );
           }),
         ),
-        scaffoldBackgroundColor: appColors.white,
+        scaffoldBackgroundColor: Colors.transparent,
       );
 
   static const appColors = AppColors(
     // Primary
     primary: ClaudePalette.accent,
-    primaryShade1: Color(0xFFF8E7DE),
-    primaryShade2: Color(0xFFF1CDBE),
-    primaryShade3: Color(0xFFE8AD98),
-    primaryShade4: Color(0xFFDF8F74),
-    primaryShade5: Color(0xFFD97757),
-    primaryTint1: Color(0xFFC96847),
+    primaryShade1: Color(0xFFFFE4E0),
+    primaryShade2: Color(0xFFFFC2BB),
+    primaryShade3: Color(0xFFFF9288),
+    primaryShade4: Color(0xFFF95D51),
+    primaryShade5: Color(0xFFE6352E),
+    primaryTint1: Color(0xFFD12B25),
     primaryTint2: ClaudePalette.accentPressed,
-    primaryTint3: Color(0xFF7F3B28),
-    primaryTint4: Color(0xFF5C2C20),
-    primaryTint5: Color(0xFF3E211B),
+    primaryTint3: Color(0xFF8F1715),
+    primaryTint4: Color(0xFF641210),
+    primaryTint5: Color(0xFF3F0D0B),
 
     // Secondary
     secondary: Color(0xFF8B5E49),
@@ -179,6 +202,26 @@ class AppTheme {
       surface: appColors.gray,
       onSurface: appColors.white,
     ),
+    cupertinoOverrideTheme: CupertinoThemeData(
+      brightness: Brightness.dark,
+      primaryColor: appColors.primary,
+      scaffoldBackgroundColor: Colors.transparent,
+      barBackgroundColor: Colors.transparent,
+      textTheme: CupertinoTextThemeData(
+        primaryColor: appColors.primary,
+        textStyle: TextStyle(color: appColors.white),
+      ),
+    ),
+    pageTransitionsTheme: const PageTransitionsTheme(
+      builders: {
+        TargetPlatform.android: ZoomPageTransitionsBuilder(),
+        TargetPlatform.fuchsia: ZoomPageTransitionsBuilder(),
+        TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+        TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+        TargetPlatform.linux: ZoomPageTransitionsBuilder(),
+        TargetPlatform.windows: ZoomPageTransitionsBuilder(),
+      },
+    ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: appColors.primary,
@@ -205,7 +248,9 @@ class AppTheme {
       ),
     ),
     appBarTheme: AppBarTheme(
-      backgroundColor: appColors.black,
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      scrolledUnderElevation: 0,
       titleTextStyle: AppTypography.typography.bodyLarge.copyWith(
         color: appColors.white,
         fontSize: 17,
@@ -227,7 +272,7 @@ class AppTheme {
         );
       }),
     ),
-    scaffoldBackgroundColor: appColors.black,
+    scaffoldBackgroundColor: Colors.transparent,
   );
 }
 

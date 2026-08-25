@@ -5,6 +5,8 @@ import 'screens/onboarding_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'theme/app_scale.dart';
+import 'theme/app_gradient_background.dart';
+import 'theme/app_scroll_behavior.dart';
 import 'theme/app_theme_mode.dart';
 import 'theme/theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -30,7 +32,7 @@ class WorkoutBuddyApp extends StatelessWidget {
       builder: (context, activeThemeMode, _) {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
-          title: 'Pump Check',
+          title: 'Burn Camp',
           home: const SplashScreen(),
           routes: {
             '/dashboard': (context) => const DashboardScreen(),
@@ -39,8 +41,11 @@ class WorkoutBuddyApp extends StatelessWidget {
           theme: AppTheme.light,
           darkTheme: AppTheme.dark,
           themeMode: activeThemeMode,
+          scrollBehavior: const AppScrollBehavior(),
           builder: (context, child) {
-            return AppScale(child: child ?? const SizedBox.shrink());
+            return AppGradientBackground(
+              child: AppScale(child: child ?? const SizedBox.shrink()),
+            );
           },
           // home: const DashboardScreen(),
         );

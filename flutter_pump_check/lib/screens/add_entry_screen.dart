@@ -37,7 +37,7 @@ class _AddEntryScreenState extends State<AddEntryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(title: const Text('Add Workout')),
       body: Padding(
         padding: const EdgeInsets.all(20),

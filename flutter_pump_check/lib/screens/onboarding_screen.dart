@@ -70,6 +70,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     try {
       // 🔹 Check if username is already taken
       final taken = await _isUsernameTaken(username);
+      if (!mounted) return;
       if (taken) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Username '$username' is already taken.")),
@@ -96,11 +97,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
       // if (mounted) Navigator.pushReplacementNamed(context, '/dashboard');
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text("Error saving profile: $e")));
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -109,8 +111,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(title: const Text("Welcome to Pump Check")),
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(title: const Text("Welcome to Burn Camp")),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Center(

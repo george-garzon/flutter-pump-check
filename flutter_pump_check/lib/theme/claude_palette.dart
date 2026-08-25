@@ -12,8 +12,8 @@ class ClaudePalette {
   static const mutedText = Color(0xFFB8AFA6);
   static const lightMutedText = Color(0xFF8F877E);
 
-  static const accent = Color(0xFFD97757);
-  static const accentPressed = Color(0xFFA94F34);
-  static const selectedSurface = Color(0xFF5F4336);
+  static const accent = Color(0xFFE6352E);
+  static const accentPressed = Color(0xFFB8201C);
+  static const selectedSurface = Color(0xFF64312E);
   static const goal = Color(0xFFE7B66B);
 }

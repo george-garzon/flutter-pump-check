@@ -14,7 +14,6 @@ import '../../../screens/message_dialog.dart';
 import '../../../screens/add_friend_modal.dart';
 import '../../../../../../theme/theme.dart';
 
-
 class DashboardHomeContent extends StatefulWidget {
   const DashboardHomeContent({super.key});
 
@@ -104,7 +103,7 @@ class _DashboardHomeContentState extends State<DashboardHomeContent> {
         final score = data['score'] ?? 0;
 
         return Scaffold(
-          backgroundColor: colors.white,
+          backgroundColor: Colors.transparent,
           body: SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -128,12 +127,14 @@ class _DashboardHomeContentState extends State<DashboardHomeContent> {
                       if (newGroup != null) {
                         final user = FirebaseAuth.instance.currentUser;
 
-                        await FirebaseFirestore.instance.collection('groups').add({
-                          'name': newGroup.name,
-                          'ownerId': user!.uid,
-                          'memberIds': [user.uid],
-                          'createdAt': FieldValue.serverTimestamp(),
-                        });
+                        await FirebaseFirestore.instance
+                            .collection('groups')
+                            .add({
+                              'name': newGroup.name,
+                              'ownerId': user!.uid,
+                              'memberIds': [user.uid],
+                              'createdAt': FieldValue.serverTimestamp(),
+                            });
                       }
                     },
                     actionLabel: "Create",
@@ -178,7 +179,9 @@ class _DashboardHomeContentState extends State<DashboardHomeContent> {
                       stream: getFriendsStream(user.uid),
                       builder: (context, snapshot) {
                         if (!snapshot.hasData) {
-                          return const Center(child: CircularProgressIndicator());
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
                         }
                         final friends = snapshot.data!;
                         if (friends.isEmpty) {
@@ -188,38 +191,39 @@ class _DashboardHomeContentState extends State<DashboardHomeContent> {
                           children: friends
                               .map(
                                 (f) => FriendTile(
-                              friend: f,
-                              onSend: () async {
-                                final chosen = await showMessageDialog(
-                                  context,
-                                  (messages.toList()..shuffle())
-                                      .first,
-                                );
-                                if (chosen != null && chosen.isNotEmpty) {
-                                  await FirebaseFirestore.instance
-                                      .collection('messages')
-                                      .add({
-                                    'from': FirebaseAuth
-                                        .instance
-                                        .currentUser
-                                        ?.uid,
-                                    'to': f.username,
-                                    'text': chosen,
-                                    'timestamp':
-                                    FieldValue.serverTimestamp(),
-                                  });
+                                  friend: f,
+                                  onSend: () async {
+                                    final chosen = await showMessageDialog(
+                                      context,
+                                      (messages.toList()..shuffle()).first,
+                                    );
+                                    if (chosen != null && chosen.isNotEmpty) {
+                                      await FirebaseFirestore.instance
+                                          .collection('messages')
+                                          .add({
+                                            'from': FirebaseAuth
+                                                .instance
+                                                .currentUser
+                                                ?.uid,
+                                            'to': f.username,
+                                            'text': chosen,
+                                            'timestamp':
+                                                FieldValue.serverTimestamp(),
+                                          });
 
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        "Sent to ${f.name}: $chosen",
-                                      ),
-                                    ),
-                                  );
-                                }
-                              },
-                            ),
-                          )
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            "Sent to ${f.name}: $chosen",
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                ),
+                              )
                               .toList(),
                         );
                       },
@@ -230,7 +234,6 @@ class _DashboardHomeContentState extends State<DashboardHomeContent> {
             ),
           ),
         );
-
       },
     );
   }
@@ -281,15 +284,9 @@ class _DashboardHomeContentState extends State<DashboardHomeContent> {
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Center(
-            child: Text(
-                text,
-                style: TextStyle(
-                  color: Colors.black
-                )
-            ),
+          child: Text(text, style: TextStyle(color: Colors.black)),
         ),
-      )
+      ),
     );
   }
-
 }

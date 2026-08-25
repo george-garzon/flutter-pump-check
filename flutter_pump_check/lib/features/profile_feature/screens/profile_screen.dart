@@ -117,14 +117,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     return Scaffold(
-      backgroundColor: colors.white,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: Text(
-            'Profile & Settings',
-          style: TextStyle(
-            color: colors.gray
-          ),
-        ),
+        title: Text('Profile & Settings', style: TextStyle(color: colors.gray)),
         backgroundColor: Colors.transparent,
         centerTitle: true,
       ),
@@ -179,15 +174,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             // Display Name
             TextField(
               controller: nameController,
-              style: TextStyle(
-                color: colors.gray,
-              ),
+              style: TextStyle(color: colors.gray),
               decoration: InputDecoration(
                 labelText: 'Display Name',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
-
               ),
             ),
             const SizedBox(height: 16),
@@ -196,9 +188,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             TextField(
               controller: goalController,
               keyboardType: TextInputType.number,
-              style: TextStyle(
-                color: colors.gray,
-              ),
+              style: TextStyle(color: colors.gray),
               decoration: InputDecoration(
                 labelText: 'Workout Goal (minutes/day)',
                 border: OutlineInputBorder(
