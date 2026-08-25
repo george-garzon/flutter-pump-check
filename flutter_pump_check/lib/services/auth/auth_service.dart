@@ -47,6 +47,7 @@ class AuthService {
         'photoUrl': user.photoURL ?? '',
         'goalCalories': null, // onboarding must set this
         'defaultWorkoutMinutes': 30,
+        'workoutTrackingMode': 'manual',
         'streakMode': 'strict',
         'themeMode': 'dark',
         'notificationsEnabled': true,

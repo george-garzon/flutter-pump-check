@@ -3,17 +3,15 @@ import '../../../../../../theme/theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../services/auth/auth_provider.dart';
 
-
 class LoginScreen extends ConsumerWidget {
   const LoginScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final colors = context.theme.appColors;
 
     return Scaffold(
-      backgroundColor: colors.gray,
+      backgroundColor: Colors.transparent,
       body: Center(
         child: SizedBox(
           width: 280,
@@ -23,9 +21,10 @@ class LoginScreen extends ConsumerWidget {
               try {
                 await ref.read(authServiceProvider).signInWithGoogle();
               } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Login failed: $e')),
-                );
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Login failed: $e')));
               }
             },
             style: ElevatedButton.styleFrom(

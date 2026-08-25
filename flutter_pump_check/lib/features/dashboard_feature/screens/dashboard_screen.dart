@@ -1,11 +1,15 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_pump_check/services/workout_service.dart';
+import 'package:flutter_pump_check/theme/app_gradient_background.dart';
 import 'package:flutter_pump_check/theme/app_theme_mode.dart';
 import 'package:flutter_pump_check/theme/claude_palette.dart';
+import 'package:flutter_pump_check/utils/messages.dart' as preset_messages;
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -43,8 +47,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
   HistoryRange _historyRange = HistoryRange.week;
   bool _historyShowsAverage = true;
   bool _showFriends = true;
+  final TextEditingController _friendUsernameController =
+      TextEditingController();
 
   User? get _user => FirebaseAuth.instance.currentUser;
+
+  @override
+  void dispose() {
+    _friendUsernameController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -219,10 +231,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             _topHeader(
               title: 'History',
-              leading: IconButton(
-                icon: Icon(Icons.history, color: _cream, size: 28),
-                onPressed: () {},
-              ),
+              leading: SizedBox(width: 48),
               trailing: IconButton(
                 tooltip: _historyShowsAverage
                     ? 'Show total calories'
@@ -276,22 +285,79 @@ class _DashboardScreenState extends State<DashboardScreen> {
             onPressed: _inviteFriends,
           ),
         ),
-        Expanded(
-          child: Center(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 38),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.forum_outlined, color: _muted, size: 74),
-                  SizedBox(height: 26),
-                  Text(
-                    'Tap on a friend from the leaderboard to send them a cheer, challenge, or note. Those conversations will show up here.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: _muted, fontSize: 21, height: 1.25),
-                  ),
-                ],
+        Padding(
+          padding: const EdgeInsets.fromLTRB(22, 18, 22, 0),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _friendUsernameController,
+                  style: TextStyle(color: _cream),
+                  decoration: _inputDecoration('Add friend by username'),
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (_) => _sendFriendRequest(),
+                ),
               ),
+              SizedBox(width: 10),
+              IconButton.filled(
+                style: IconButton.styleFrom(
+                  backgroundColor: _accent,
+                  foregroundColor: _onAccent,
+                ),
+                onPressed: _sendFriendRequest,
+                icon: const Icon(Icons.send),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () async => setState(() {}),
+            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: _messageStream(),
+              builder: (context, snapshot) {
+                final threads = _conversationThreads(snapshot.data?.docs ?? []);
+
+                if (snapshot.connectionState == ConnectionState.waiting &&
+                    threads.isEmpty) {
+                  return ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: const [
+                      SizedBox(height: 160),
+                      Center(child: CircularProgressIndicator()),
+                    ],
+                  );
+                }
+
+                if (threads.isEmpty) {
+                  return ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 38),
+                    children: [
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.18,
+                      ),
+                      Icon(Icons.forum_outlined, color: _muted, size: 74),
+                      SizedBox(height: 26),
+                      Text(
+                        'Tap a friend from the leaderboard to send a preset message. Those conversations will show up here.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: _muted,
+                          fontSize: 21,
+                          height: 1.25,
+                        ),
+                      ),
+                    ],
+                  );
+                }
+
+                return ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(22, 18, 22, 22),
+                  children: threads.map(_conversationTile).toList(),
+                );
+              },
             ),
           ),
         ),
@@ -300,44 +366,397 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _activityTab() {
-    return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: WorkoutService.watchSummaries(limit: 60),
-      builder: (context, snapshot) {
-        final summaries = snapshot.data ?? [];
-        return Column(
-          children: [
-            _topHeader(
-              title: 'Alerts',
-              leading: SizedBox(width: 48),
-              trailing: IconButton(
-                icon: Icon(Icons.ios_share, color: _cream, size: 27),
-                onPressed: () {
-                  Share.share(
-                    'Burn Camp keeps me accountable for calories burned and workout minutes.',
+    final user = _user;
+
+    return Column(
+      children: [
+        _topHeader(
+          title: 'Alerts',
+          leading: SizedBox(width: 48),
+          trailing: IconButton(
+            icon: Icon(Icons.ios_share, color: _cream, size: 27),
+            onPressed: () {
+              Share.share(
+                'Burn Camp keeps me accountable for calories burned and workout minutes.',
+              );
+            },
+          ),
+        ),
+        Expanded(
+          child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            stream: user == null
+                ? const Stream.empty()
+                : FirebaseFirestore.instance
+                      .collection('group_invites')
+                      .where('toUserId', isEqualTo: user.uid)
+                      .where('status', isEqualTo: 'pending')
+                      .snapshots(),
+            builder: (context, inviteSnapshot) {
+              final invites = inviteSnapshot.data?.docs ?? [];
+
+              return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                stream: user == null
+                    ? const Stream.empty()
+                    : FirebaseFirestore.instance
+                          .collection('friend_requests')
+                          .where('toUserId', isEqualTo: user.uid)
+                          .where('status', isEqualTo: 'pending')
+                          .snapshots(),
+                builder: (context, friendSnapshot) {
+                  final friendRequests = friendSnapshot.data?.docs ?? [];
+
+                  return StreamBuilder<List<Map<String, dynamic>>>(
+                    stream: WorkoutService.watchSummaries(limit: 60),
+                    builder: (context, summarySnapshot) {
+                      final summaries = summarySnapshot.data ?? [];
+
+                      return ListView(
+                        padding: const EdgeInsets.fromLTRB(22, 24, 22, 22),
+                        children: _alertItems(
+                          summaries,
+                          invites,
+                          friendRequests,
+                        ),
+                      );
+                    },
                   );
                 },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> _messageStream() {
+    final user = _user;
+    if (user == null) return const Stream.empty();
+
+    return FirebaseFirestore.instance
+        .collection('messages')
+        .where('participants', arrayContains: user.uid)
+        .snapshots();
+  }
+
+  List<_ConversationThread> _conversationThreads(
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+  ) {
+    final user = _user;
+    if (user == null) return [];
+
+    final grouped =
+        <String, List<QueryDocumentSnapshot<Map<String, dynamic>>>>{};
+    for (final doc in docs) {
+      final data = doc.data();
+      final participants = List<String>.from(data['participants'] ?? const []);
+      if (!participants.contains(user.uid) || participants.length < 2) continue;
+
+      final conversationId =
+          (data['conversationId'] as String?) ??
+          _conversationIdForParticipants(participants[0], participants[1]);
+      grouped.putIfAbsent(conversationId, () => []).add(doc);
+    }
+
+    final threads = grouped.entries.map((entry) {
+      final messages = entry.value
+        ..sort(
+          (a, b) => _messageTimestamp(
+            a.data(),
+          ).compareTo(_messageTimestamp(b.data())),
+        );
+      final last = messages.last;
+      final lastData = last.data();
+      final participants = List<String>.from(
+        lastData['participants'] ?? const [],
+      );
+      final otherUserId = participants.firstWhere(
+        (id) => id != user.uid,
+        orElse: () => '',
+      );
+      final otherName = lastData['fromUserId'] == otherUserId
+          ? (lastData['fromUserName'] as String?) ?? 'Friend'
+          : (lastData['toUserName'] as String?) ?? 'Friend';
+
+      return _ConversationThread(
+        conversationId: entry.key,
+        otherUserId: otherUserId,
+        otherName: otherName,
+        lastText: (lastData['text'] as String?) ?? '',
+        lastAt: _messageTimestamp(lastData),
+      );
+    }).toList();
+
+    threads.sort((a, b) => b.lastAt.compareTo(a.lastAt));
+    return threads;
+  }
+
+  Widget _conversationTile(_ConversationThread thread) {
+    return InkWell(
+      onTap: () => _showPresetMessageSheet(
+        recipientId: thread.otherUserId,
+        recipientName: thread.otherName,
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: _divider)),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: _accent,
+              child: Icon(Icons.chat_bubble_outline, color: _background),
+            ),
+            SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    thread.otherName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: _cream,
+                      fontSize: 19,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(height: 5),
+                  Text(
+                    thread.lastText,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: _muted, fontSize: 15),
+                  ),
+                ],
               ),
             ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(22, 24, 22, 22),
-                children: _alertItems(summaries),
-              ),
+            SizedBox(width: 12),
+            Text(
+              _messageTimeLabel(thread.lastAt),
+              style: TextStyle(color: _muted, fontSize: 12),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showPresetMessageSheet({
+    required String recipientId,
+    required String recipientName,
+  }) async {
+    final user = _user;
+    if (user == null || recipientId.isEmpty || recipientId == user.uid) return;
+
+    final conversationId = _conversationIdForParticipants(
+      user.uid,
+      recipientId,
+    );
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: _background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (context) {
+        return SizedBox(
+          height: MediaQuery.of(context).size.height * 0.72,
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: 22,
+                right: 22,
+                top: 18,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 18,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          recipientName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: _cream, fontSize: 22),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: Icon(Icons.close, color: _muted),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 8),
+                  Expanded(
+                    child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                      stream: FirebaseFirestore.instance
+                          .collection('messages')
+                          .where('conversationId', isEqualTo: conversationId)
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        final docs = [...(snapshot.data?.docs ?? const [])]
+                          ..sort(
+                            (a, b) => _messageTimestamp(
+                              a.data(),
+                            ).compareTo(_messageTimestamp(b.data())),
+                          );
+
+                        if (docs.isEmpty) {
+                          return Center(
+                            child: Text(
+                              'Send a preset message to start the conversation.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: _muted, fontSize: 16),
+                            ),
+                          );
+                        }
+
+                        return ListView(
+                          children: docs.map((doc) {
+                            final data = doc.data();
+                            final isMine = data['fromUserId'] == user.uid;
+                            return Align(
+                              alignment: isMine
+                                  ? Alignment.centerRight
+                                  : Alignment.centerLeft,
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 10),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 11,
+                                ),
+                                constraints: BoxConstraints(
+                                  maxWidth:
+                                      MediaQuery.of(context).size.width * 0.68,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isMine ? _accent : _selectedSurface,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Text(
+                                  (data['text'] as String?) ?? '',
+                                  style: TextStyle(
+                                    color: isMine ? _onAccent : _cream,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        );
+                      },
+                    ),
+                  ),
+                  SizedBox(height: 12),
+                  Text(
+                    'Preset messages only',
+                    style: TextStyle(color: _muted, fontSize: 13),
+                  ),
+                  SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: preset_messages.messages.map((message) {
+                      return ActionChip(
+                        backgroundColor: _selectedSurface,
+                        side: BorderSide(color: _divider),
+                        label: Text(message, style: TextStyle(color: _cream)),
+                        onPressed: () => _sendPresetMessage(
+                          recipientId: recipientId,
+                          recipientName: recipientName,
+                          text: message,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
+          ),
         );
       },
     );
   }
 
-  List<Widget> _alertItems(List<Map<String, dynamic>> summaries) {
+  Future<void> _sendPresetMessage({
+    required String recipientId,
+    required String recipientName,
+    required String text,
+  }) async {
+    final user = _user;
+    if (user == null) return;
+
+    final db = FirebaseFirestore.instance;
+    final myDoc = await db.collection('users').doc(user.uid).get();
+    final myName = _displayNameForUserData(
+      myDoc.data() ?? {},
+      fallback: user.displayName ?? user.email ?? 'Burner',
+    );
+    final conversationId = _conversationIdForParticipants(
+      user.uid,
+      recipientId,
+    );
+
+    await db.collection('messages').add({
+      'conversationId': conversationId,
+      'participants': [user.uid, recipientId],
+      'fromUserId': user.uid,
+      'fromUserName': myName,
+      'toUserId': recipientId,
+      'toUserName': recipientName,
+      'from': user.uid,
+      'to': recipientId,
+      'text': text,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+  }
+
+  String _conversationIdForParticipants(String a, String b) {
+    final ids = [a, b]..sort();
+    return '${ids[0]}_${ids[1]}';
+  }
+
+  DateTime _messageTimestamp(Map<String, dynamic> data) {
+    return (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime(1970);
+  }
+
+  String _messageTimeLabel(DateTime timestamp) {
+    if (timestamp.year == 1970) return '';
+    final now = DateTime.now();
+    if (WorkoutService.dateKey(timestamp) == WorkoutService.dateKey(now)) {
+      return DateFormat.jm().format(timestamp);
+    }
+    return DateFormat.Md().format(timestamp);
+  }
+
+  List<Widget> _alertItems(
+    List<Map<String, dynamic>> summaries,
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> groupInvites,
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> friendRequests,
+  ) {
+    final items = <Widget>[
+      ...friendRequests.map(_friendRequestAlertTile),
+      ...groupInvites.map(_groupInviteAlertTile),
+    ];
+
     if (summaries.isEmpty) {
+      if (items.isNotEmpty) return items;
+
       return [
         SizedBox(height: 160),
         Icon(Icons.notifications_none, color: _muted, size: 70),
         SizedBox(height: 18),
         Text(
-          'Your workout recaps, goal streaks, and calorie trends will show up here.',
+          'Your friend requests, group invites, workout recaps, goal streaks, and calorie trends will show up here.',
           textAlign: TextAlign.center,
           style: TextStyle(color: _muted, fontSize: 19),
         ),
@@ -353,7 +772,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           : b;
     });
 
-    return [
+    items.addAll([
       _alertTile(
         'You burned ${NumberFormat.decimalPattern().format(week.calories)} calories this week across ${week.minutes} workout minutes.',
         'Now',
@@ -370,7 +789,144 @@ class _DashboardScreenState extends State<DashboardScreen> {
         'Tip: update Default workout duration in Settings to make manual entry faster.',
         'Settings',
       ),
-    ];
+    ]);
+
+    return items;
+  }
+
+  Widget _friendRequestAlertTile(
+    QueryDocumentSnapshot<Map<String, dynamic>> request,
+  ) {
+    final data = request.data();
+    final fromName = (data['fromUserName'] as String?) ?? 'Someone';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 22),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: _divider)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 23,
+            backgroundColor: _accent,
+            child: Icon(Icons.person_add_alt, color: _background, size: 24),
+          ),
+          SizedBox(width: 18),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$fromName sent you a friend request.',
+                  style: TextStyle(color: _cream, fontSize: 20, height: 1.2),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Friend request',
+                  style: TextStyle(color: _muted, fontSize: 14),
+                ),
+                SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: _muted,
+                          side: BorderSide(color: _divider),
+                        ),
+                        onPressed: () => _declineFriendRequest(request),
+                        child: Text('Decline'),
+                      ),
+                    ),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _accent,
+                          foregroundColor: _onAccent,
+                        ),
+                        onPressed: () => _acceptFriendRequest(request),
+                        child: Text('Accept'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _groupInviteAlertTile(
+    QueryDocumentSnapshot<Map<String, dynamic>> invite,
+  ) {
+    final data = invite.data();
+    final groupName = (data['groupName'] as String?) ?? 'a group';
+    final fromName = (data['fromUserName'] as String?) ?? 'Someone';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 22),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: _divider)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 23,
+            backgroundColor: _accent,
+            child: Icon(Icons.group_add, color: _background, size: 24),
+          ),
+          SizedBox(width: 18),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$fromName invited you to $groupName.',
+                  style: TextStyle(color: _cream, fontSize: 20, height: 1.2),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Group invite',
+                  style: TextStyle(color: _muted, fontSize: 14),
+                ),
+                SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: _muted,
+                          side: BorderSide(color: _divider),
+                        ),
+                        onPressed: () => _declineGroupInvite(invite),
+                        child: Text('Decline'),
+                      ),
+                    ),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _accent,
+                          foregroundColor: _onAccent,
+                        ),
+                        onPressed: () => _acceptGroupInvite(invite),
+                        child: Text('Accept'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _alertTile(String message, String dateLabel) {
@@ -402,6 +958,249 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Future<void> _sendFriendRequest() async {
+    final user = _user;
+    if (user == null) {
+      _showSnack('Sign in to send friend requests.');
+      return;
+    }
+
+    final username = _friendUsernameController.text.trim().replaceFirst(
+      '@',
+      '',
+    );
+    if (username.isEmpty) {
+      _showSnack('Enter a username to add.');
+      return;
+    }
+
+    try {
+      final friendDoc = await _findUserByUsername(username);
+      if (friendDoc == null) {
+        _showSnack('Could not find @$username.');
+        return;
+      }
+
+      final sent = await _sendFriendRequestToUser(
+        friendId: friendDoc.id,
+        fallbackUsername: username,
+      );
+      if (sent) _friendUsernameController.clear();
+    } catch (e) {
+      _showSnack('Could not send friend request: $e');
+    }
+  }
+
+  Future<bool> _sendFriendRequestToUser({
+    required String friendId,
+    required String fallbackUsername,
+  }) async {
+    final user = _user;
+    if (user == null) {
+      _showSnack('Sign in to send friend requests.');
+      return false;
+    }
+
+    final db = FirebaseFirestore.instance;
+    final friendDoc = await db.collection('users').doc(friendId).get();
+    if (!friendDoc.exists) {
+      _showSnack('Could not find @$fallbackUsername.');
+      return false;
+    }
+
+    final friendData = friendDoc.data() ?? {};
+    final friendUsername =
+        (friendData['username'] as String?)?.trim().isNotEmpty == true
+        ? (friendData['username'] as String).trim()
+        : fallbackUsername;
+
+    if (friendId == user.uid) {
+      _showSnack('You cannot add yourself.');
+      return false;
+    }
+
+    final myDoc = await db.collection('users').doc(user.uid).get();
+    final myData = myDoc.data() ?? {};
+    final friends = List<String>.from(myData['friends'] ?? const []);
+    if (friends.contains(friendId)) {
+      _showSnack('You are already friends with @$friendUsername.');
+      return false;
+    }
+
+    final sentPending = await db
+        .collection('friend_requests')
+        .where('fromUserId', isEqualTo: user.uid)
+        .where('toUserId', isEqualTo: friendId)
+        .where('status', isEqualTo: 'pending')
+        .limit(1)
+        .get();
+    if (sentPending.docs.isNotEmpty) {
+      _showSnack('Friend request already sent to @$friendUsername.');
+      return false;
+    }
+
+    final receivedPending = await db
+        .collection('friend_requests')
+        .where('fromUserId', isEqualTo: friendId)
+        .where('toUserId', isEqualTo: user.uid)
+        .where('status', isEqualTo: 'pending')
+        .limit(1)
+        .get();
+    if (receivedPending.docs.isNotEmpty) {
+      _showSnack('@$friendUsername already sent you a request.');
+      return false;
+    }
+
+    final myUsername =
+        (myData['username'] as String?) ?? user.displayName ?? user.email;
+    await db.collection('friend_requests').doc('${user.uid}_$friendId').set({
+      'fromUserId': user.uid,
+      'fromUserName': myUsername ?? 'Burner',
+      'toUserId': friendId,
+      'toUserName': friendUsername,
+      'status': 'pending',
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+
+    _showSnack('Friend request sent to @$friendUsername.');
+    return true;
+  }
+
+  Future<void> _acceptFriendRequest(
+    QueryDocumentSnapshot<Map<String, dynamic>> request,
+  ) async {
+    final user = _user;
+    if (user == null) return;
+
+    final data = request.data();
+    final fromUserId = data['fromUserId'] as String?;
+    final toUserId = data['toUserId'] as String?;
+    final fromName = (data['fromUserName'] as String?) ?? 'this user';
+
+    if (fromUserId == null || toUserId == null || toUserId != user.uid) {
+      _showSnack('This friend request is invalid.');
+      return;
+    }
+
+    final db = FirebaseFirestore.instance;
+    try {
+      await db.runTransaction((transaction) async {
+        transaction.update(request.reference, {
+          'status': 'accepted',
+          'respondedAt': FieldValue.serverTimestamp(),
+        });
+        transaction.set(db.collection('users').doc(fromUserId), {
+          'friends': FieldValue.arrayUnion([toUserId]),
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+        transaction.set(db.collection('users').doc(toUserId), {
+          'friends': FieldValue.arrayUnion([fromUserId]),
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      });
+
+      _showSnack('You are now friends with $fromName.');
+    } catch (e) {
+      _showSnack('Could not accept friend request: $e');
+    }
+  }
+
+  Future<void> _declineFriendRequest(
+    QueryDocumentSnapshot<Map<String, dynamic>> request,
+  ) async {
+    try {
+      await request.reference.update({
+        'status': 'declined',
+        'respondedAt': FieldValue.serverTimestamp(),
+      });
+      _showSnack('Friend request declined.');
+    } catch (e) {
+      _showSnack('Could not decline friend request: $e');
+    }
+  }
+
+  Future<void> _acceptGroupInvite(
+    QueryDocumentSnapshot<Map<String, dynamic>> invite,
+  ) async {
+    final user = _user;
+    if (user == null) return;
+
+    final data = invite.data();
+    final groupId = data['groupId'] as String?;
+    final groupName = (data['groupName'] as String?) ?? 'group';
+    if (groupId == null || groupId.isEmpty) {
+      _showSnack('This invite is missing a group.');
+      return;
+    }
+
+    final db = FirebaseFirestore.instance;
+    final groupRef = db.collection('groups').doc(groupId);
+    final userRef = db.collection('users').doc(user.uid);
+    final groupInviteRef = groupRef.collection('invitations').doc(user.uid);
+
+    try {
+      await db.runTransaction((transaction) async {
+        transaction.set(groupRef, {
+          'memberIds': FieldValue.arrayUnion([user.uid]),
+          'pendingInviteIds': FieldValue.arrayRemove([user.uid]),
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+        transaction.set(userRef, {
+          'groups': FieldValue.arrayUnion([groupId]),
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+        transaction.update(invite.reference, {
+          'status': 'accepted',
+          'respondedAt': FieldValue.serverTimestamp(),
+        });
+        transaction.set(groupInviteRef, {
+          'status': 'accepted',
+          'respondedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      });
+
+      _showSnack('Joined $groupName.');
+    } catch (e) {
+      _showSnack('Could not accept invite: $e');
+    }
+  }
+
+  Future<void> _declineGroupInvite(
+    QueryDocumentSnapshot<Map<String, dynamic>> invite,
+  ) async {
+    final user = _user;
+    if (user == null) return;
+
+    final data = invite.data();
+    final groupId = data['groupId'] as String?;
+    final db = FirebaseFirestore.instance;
+    final batch = db.batch();
+
+    batch.update(invite.reference, {
+      'status': 'declined',
+      'respondedAt': FieldValue.serverTimestamp(),
+    });
+
+    if (groupId != null && groupId.isNotEmpty) {
+      final groupRef = db.collection('groups').doc(groupId);
+      batch.set(groupRef, {
+        'pendingInviteIds': FieldValue.arrayRemove([user.uid]),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      batch.set(groupRef.collection('invitations').doc(user.uid), {
+        'status': 'declined',
+        'respondedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    }
+
+    try {
+      await batch.commit();
+      _showSnack('Group invite declined.');
+    } catch (e) {
+      _showSnack('Could not decline invite: $e');
+    }
+  }
+
   Widget _settingsTab() {
     final user = _user;
     if (user == null) {
@@ -421,6 +1220,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final goal = _goalCalories(data);
         final defaultMinutes =
             (data['defaultWorkoutMinutes'] as num?)?.toInt() ?? 30;
+        final workoutTrackingMode =
+            (data['workoutTrackingMode'] as String?) ?? 'manual';
         final streakMode = (data['streakMode'] as String?) ?? 'strict';
         final themeMode = (data['themeMode'] as String?) ?? 'dark';
         final notificationsEnabled = data['notificationsEnabled'] != false;
@@ -440,9 +1241,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 children: [
                   const SizedBox(height: 32),
                   _settingsRow(
-                    'Manual workout tracking',
-                    'Connected',
-                    onTap: _showManualTrackingPage,
+                    'Workout tracking',
+                    _workoutTrackingModeLabel(workoutTrackingMode),
+                    onTap: () => _showWorkoutTrackingSheet(workoutTrackingMode),
                   ),
                   _settingsRow(
                     'Daily calorie goal',
@@ -716,10 +1517,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final now = WorkoutService.startOfDay(DateTime.now());
     final months = _historyMonthsThroughCurrent(earliestYear);
+    final scaleValue = _averagePositiveHistoryValue(
+      summaries.map((summary) => _historyValueForSummaries([summary])),
+    );
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(22, 18, 22, 22),
-      children: _dayHistoryRows(months, summariesByMondayWeek, now),
+      children: _dayHistoryRows(months, summariesByMondayWeek, now, scaleValue),
     );
   }
 
@@ -736,10 +1540,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final now = WorkoutService.startOfDay(DateTime.now());
     final months = _historyMonthsThroughCurrent(earliestYear);
+    final scaleValue = _averagePositiveHistoryValue(
+      summariesByMondayWeek.values.map(_historyValueForSummaries),
+    );
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(22, 18, 22, 22),
-      children: _weekHistoryRows(months, summariesByMondayWeek, now),
+      children: _weekHistoryRows(
+        months,
+        summariesByMondayWeek,
+        now,
+        scaleValue,
+      ),
     );
   }
 
@@ -747,6 +1559,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     List<DateTime> months,
     Map<DateTime, List<Map<String, dynamic>>> summariesByMondayWeek,
     DateTime today,
+    int scaleValue,
   ) {
     final rows = <Widget>[];
 
@@ -807,7 +1620,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ..add(const SizedBox(height: 14));
         } else {
           rows
-            ..addAll(weekSummaries.map(_historyBar))
+            ..addAll(
+              weekSummaries.map((summary) => _historyBar(summary, scaleValue)),
+            )
             ..add(const SizedBox(height: 14));
         }
       }
@@ -822,6 +1637,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     List<DateTime> months,
     Map<DateTime, List<Map<String, dynamic>>> summariesByMondayWeek,
     DateTime today,
+    int scaleValue,
   ) {
     final rows = <Widget>[];
 
@@ -855,7 +1671,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       for (final week in mondayWeeks) {
         rows
-          ..add(_weekBar(week, summariesByMondayWeek[week] ?? const []))
+          ..add(
+            _weekBar(week, summariesByMondayWeek[week] ?? const [], scaleValue),
+          )
           ..add(const SizedBox(height: 14));
       }
 
@@ -878,23 +1696,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final allMonths = _historyMonthsThroughCurrent(earliestYear);
 
-    final maxValue = allMonths.fold<int>(
-      1,
-      (maxValue, month) => math.max(
-        maxValue,
-        _historyValueForSummaries(groups[month] ?? const []),
-      ),
+    final scaleValue = _averagePositiveHistoryValue(
+      groups.values.map(_historyValueForSummaries),
     );
     return ListView(
       padding: const EdgeInsets.fromLTRB(22, 18, 22, 22),
-      children: _monthHistoryRows(allMonths, groups, maxValue),
+      children: _monthHistoryRows(allMonths, groups, scaleValue),
     );
   }
 
   List<Widget> _monthHistoryRows(
     List<DateTime> allMonths,
     Map<DateTime, List<Map<String, dynamic>>> groups,
-    int maxValue,
+    int scaleValue,
   ) {
     final rows = <Widget>[];
     int? currentYear;
@@ -923,7 +1737,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _monthBar(
           DateFormat.MMM().format(month),
           groups[month] ?? const [],
-          maxValue,
+          scaleValue,
         ),
       );
     }
@@ -967,13 +1781,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _weekBar(DateTime week, List<Map<String, dynamic>> summaries) {
+  Widget _weekBar(
+    DateTime week,
+    List<Map<String, dynamic>> summaries,
+    int scaleValue,
+  ) {
     final calories = _sumCalories(summaries);
     final minutes = _sumMinutes(summaries);
     final value = _historyValueForSummaries(summaries);
     final widthFactor = value == 0
         ? 0.0
-        : math.max(0.12, math.min(1.0, value / 1000));
+        : math.min(1.0, value / math.max(1, scaleValue));
 
     return _periodBar(
       label: DateFormat.Md().format(week),
@@ -993,14 +1811,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _monthBar(
     String label,
     List<Map<String, dynamic>> summaries,
-    int maxValue,
+    int scaleValue,
   ) {
     final calories = _sumCalories(summaries);
     final minutes = _sumMinutes(summaries);
     final value = _historyValueForSummaries(summaries);
     final widthFactor = value == 0
         ? 0.0
-        : math.max(0.12, math.min(1.0, value / maxValue));
+        : math.min(1.0, value / math.max(1, scaleValue));
 
     return _periodBar(
       label: label,
@@ -1038,25 +1856,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      FractionallySizedBox(
+                      _historyValueBar(
+                        valueText: valueText,
                         widthFactor: widthFactor,
-                        child: Container(
-                          height: 42,
-                          alignment: Alignment.centerLeft,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            color: _accent,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            valueText,
-                            style: TextStyle(
-                              color: _background,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
+                        fontSize: 18,
                       ),
                       SizedBox(height: 4),
                       Text(
@@ -1068,6 +1871,49 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _historyValueBar({
+    required String valueText,
+    required double widthFactor,
+    required double fontSize,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth;
+        final measuredTextWidth = _measureTextWidth(
+          valueText,
+          TextStyle(fontSize: fontSize, fontWeight: FontWeight.w700),
+        );
+        final minimumWidth = measuredTextWidth + 24;
+        final calculatedWidth = availableWidth * widthFactor;
+        final barWidth = math.min(
+          availableWidth,
+          math.max(minimumWidth, calculatedWidth),
+        );
+
+        return Container(
+          width: barWidth,
+          height: 42,
+          alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: _accent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            valueText,
+            maxLines: 1,
+            overflow: TextOverflow.visible,
+            style: TextStyle(
+              color: _background,
+              fontSize: fontSize,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -1205,55 +2051,287 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _leaderboard(_MetricAggregate aggregate) {
     if (!_showFriends) {
-      return Column(
-        children: [
-          _rankRow(
-            rank: 1,
-            icon: Icons.groups,
-            name: 'Your group',
-            value: aggregate.calories,
-            subtitle: '${aggregate.minutes} min trained',
-          ),
-          _rankRow(
-            rank: 2,
-            icon: Icons.group_outlined,
-            name: 'Create a group',
-            value: 0,
-            subtitle: 'Invite friends to compete',
-          ),
-        ],
-      );
+      return _groupsLeaderboard();
     }
 
     final user = _user;
-    final displayName = user?.displayName?.trim();
-    return Column(
-      children: [
-        _rankRow(
-          rank: 1,
-          icon: Icons.person,
-          name: displayName?.isNotEmpty == true ? displayName! : 'You',
-          value: aggregate.calories,
-          subtitle: aggregate.calories > 0
-              ? 'now · ${aggregate.minutes} min'
-              : 'no workout yet',
+    if (user == null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+        child: Text(
+          'Sign in to compare workouts with friends.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: _muted, fontSize: 17),
         ),
-        _rankRow(
-          rank: 2,
-          icon: Icons.local_fire_department,
-          name: 'Active Bot',
-          value: _botValue(aggregate.calories, 1.25),
-          subtitle: 'sample competitor',
-        ),
-        _rankRow(
-          rank: 3,
-          icon: Icons.directions_run,
-          name: 'Chill Bot',
-          value: _botValue(aggregate.calories, 0.82),
-          subtitle: 'sample competitor',
-        ),
-      ],
+      );
+    }
+
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        final userData = snapshot.data?.data() ?? {};
+        final friendIds = List<String>.from(userData['friends'] ?? const []);
+        final hiddenFriends = List<String>.from(
+          userData['hiddenFriends'] ?? const [],
+        ).toSet();
+
+        return FutureBuilder<List<_LeaderboardMember>>(
+          future: _friendLeaderboardMembers(
+            friendIds: friendIds,
+            hiddenFriends: hiddenFriends,
+            currentUserAggregate: aggregate,
+            currentUserData: userData,
+          ),
+          builder: (context, memberSnapshot) {
+            final members = memberSnapshot.data ?? const <_LeaderboardMember>[];
+
+            if (memberSnapshot.connectionState == ConnectionState.waiting &&
+                members.isEmpty) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 26),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+
+            return Column(
+              children: [
+                if (members.where((member) => member.canRemove).isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(26, 16, 26, 10),
+                    child: Text(
+                      'No friends yet. Send a request from Chats or add group members from a group.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: _muted,
+                        fontSize: 17,
+                        height: 1.25,
+                      ),
+                    ),
+                  ),
+                ...members.indexed.map((entry) {
+                  final index = entry.$1;
+                  final member = entry.$2;
+                  return _rankRow(
+                    rank: index + 1,
+                    icon: member.icon,
+                    name: member.name,
+                    value: member.calories,
+                    subtitle: member.calories > 0
+                        ? '${member.minutes} min'
+                        : 'no workout yet',
+                    onTap: member.canMessage
+                        ? () => _showPresetMessageSheet(
+                            recipientId: member.userId,
+                            recipientName: member.name,
+                          )
+                        : null,
+                    onRemove: member.canRemove
+                        ? () => _confirmRemoveFriend(member)
+                        : null,
+                  );
+                }),
+              ],
+            );
+          },
+        );
+      },
     );
+  }
+
+  Future<List<_LeaderboardMember>> _friendLeaderboardMembers({
+    required List<String> friendIds,
+    required Set<String> hiddenFriends,
+    required _MetricAggregate currentUserAggregate,
+    required Map<String, dynamic> currentUserData,
+  }) async {
+    final user = _user;
+    if (user == null) return [];
+
+    final visibleFriendIds = friendIds
+        .where((id) => id != user.uid)
+        .toSet()
+        .toList();
+    final friendUsers = await _usersByIds(visibleFriendIds);
+    final members = <_LeaderboardMember>[
+      _LeaderboardMember(
+        userId: user.uid,
+        name: _displayNameForUserData(
+          currentUserData,
+          fallback: user.displayName ?? user.email ?? 'You',
+        ),
+        calories: currentUserAggregate.calories,
+        minutes: currentUserAggregate.minutes,
+        isCurrentUser: true,
+      ),
+    ];
+
+    for (final friendId in visibleFriendIds) {
+      final friendData = friendUsers[friendId];
+      if (friendData == null) continue;
+      if (_isHiddenFriend(
+        friendId: friendId,
+        friendData: friendData,
+        hiddenFriends: hiddenFriends,
+      )) {
+        continue;
+      }
+
+      final aggregate = await _aggregateForUserPeriod(friendId, _period);
+      members.add(
+        _LeaderboardMember(
+          userId: friendId,
+          name: _displayNameForUserData(friendData, fallback: 'Friend'),
+          calories: aggregate.calories,
+          minutes: aggregate.minutes,
+          isCurrentUser: false,
+        ),
+      );
+    }
+
+    members.addAll([
+      _LeaderboardMember(
+        userId: 'active_bot',
+        name: 'Active Bot',
+        calories: _botValue(currentUserAggregate.calories, 1.25),
+        minutes: math.max(35, (currentUserAggregate.minutes * 1.15).round()),
+        isBot: true,
+      ),
+      _LeaderboardMember(
+        userId: 'chill_bot',
+        name: 'Chill Bot',
+        calories: _botValue(currentUserAggregate.calories, 0.82),
+        minutes: math.max(20, (currentUserAggregate.minutes * 0.75).round()),
+        isBot: true,
+      ),
+    ]);
+
+    members.sort((a, b) {
+      final calorieCompare = b.calories.compareTo(a.calories);
+      if (calorieCompare != 0) return calorieCompare;
+      if (a.isCurrentUser) return -1;
+      if (b.isCurrentUser) return 1;
+      return a.name.compareTo(b.name);
+    });
+
+    return members;
+  }
+
+  bool _isHiddenFriend({
+    required String friendId,
+    required Map<String, dynamic> friendData,
+    required Set<String> hiddenFriends,
+  }) {
+    final normalizedHidden = hiddenFriends
+        .map((item) => item.trim().replaceFirst('@', '').toLowerCase())
+        .toSet();
+
+    if (hiddenFriends.contains(friendId) ||
+        normalizedHidden.contains(friendId)) {
+      return true;
+    }
+
+    final username = (friendData['username'] as String?)?.trim();
+    if (username != null && username.isNotEmpty) {
+      if (hiddenFriends.contains(username)) return true;
+      if (hiddenFriends.contains('@$username')) return true;
+      if (hiddenFriends.contains(username.toLowerCase())) return true;
+      if (normalizedHidden.contains(username.toLowerCase())) return true;
+    }
+
+    final name = (friendData['name'] as String?)?.trim();
+    return name != null &&
+        name.isNotEmpty &&
+        (hiddenFriends.contains(name) ||
+            normalizedHidden.contains(name.toLowerCase()));
+  }
+
+  Future<_MetricAggregate> _aggregateForUserPeriod(
+    String userId,
+    MetricPeriod period,
+  ) async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('workouts')
+        .where('userId', isEqualTo: userId)
+        .limit(180)
+        .get();
+    final summaries = snapshot.docs.map((doc) => doc.data()).toList();
+    return _aggregateForPeriod(summaries, period);
+  }
+
+  String _displayNameForUserData(
+    Map<String, dynamic> data, {
+    required String fallback,
+  }) {
+    final name = (data['name'] as String?)?.trim();
+    if (name?.isNotEmpty == true) return name!;
+
+    final username = (data['username'] as String?)?.trim();
+    if (username?.isNotEmpty == true) return username!;
+
+    return fallback;
+  }
+
+  int _botValue(int userCalories, double factor) {
+    if (userCalories <= 0) return (350 * factor).round();
+    return (userCalories * factor).round();
+  }
+
+  Future<void> _confirmRemoveFriend(_LeaderboardMember friend) async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: _surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+            side: BorderSide(color: _divider),
+          ),
+          title: Text('Remove friend?', style: TextStyle(color: _cream)),
+          content: Text(
+            'Remove ${friend.name} from your friends list?',
+            style: TextStyle(color: _muted, fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text('Cancel', style: TextStyle(color: _muted)),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+                await _removeFriend(friend.userId, friend.name);
+              },
+              child: Text('Remove', style: TextStyle(color: _accent)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _removeFriend(String friendId, String friendName) async {
+    final user = _user;
+    if (user == null) return;
+
+    try {
+      final db = FirebaseFirestore.instance;
+      final batch = db.batch();
+      batch.set(db.collection('users').doc(user.uid), {
+        'friends': FieldValue.arrayRemove([friendId]),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      batch.set(db.collection('users').doc(friendId), {
+        'friends': FieldValue.arrayRemove([user.uid]),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      await batch.commit();
+      _showSnack('Removed $friendName from friends.');
+    } catch (e) {
+      _showSnack('Could not remove friend: $e');
+    }
   }
 
   Widget _rankRow({
@@ -1262,6 +2340,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required String name,
     required int value,
     required String subtitle,
+    VoidCallback? onTap,
+    VoidCallback? onRemove,
   }) {
     final medalColors = {
       1: Colors.amber,
@@ -1269,62 +2349,308 @@ class _DashboardScreenState extends State<DashboardScreen> {
       3: Colors.brown.shade400,
     };
 
-    return Container(
-      height: 78,
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: _divider)),
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 58,
-            child: Center(
-              child: rank <= 3
-                  ? Icon(Icons.emoji_events, color: medalColors[rank], size: 22)
-                  : Text(
-                      '$rank',
-                      style: TextStyle(color: _cream, fontSize: 18),
-                    ),
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        height: 78,
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: _divider)),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 58,
+              child: Center(
+                child: rank <= 3
+                    ? Icon(
+                        Icons.emoji_events,
+                        color: medalColors[rank],
+                        size: 22,
+                      )
+                    : Text(
+                        '$rank',
+                        style: TextStyle(color: _cream, fontSize: 18),
+                      ),
+              ),
             ),
-          ),
-          CircleAvatar(
-            radius: 23,
-            backgroundColor: _accent,
-            child: Icon(icon, color: _background, size: 26),
-          ),
-          SizedBox(width: 24),
-          Expanded(
-            child: Text(
-              name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: _cream, fontSize: 21),
+            CircleAvatar(
+              radius: 23,
+              backgroundColor: _accent,
+              child: Icon(icon, color: _background, size: 26),
             ),
-          ),
-          SizedBox(width: 16),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                NumberFormat.decimalPattern().format(value),
+            SizedBox(width: 24),
+            Expanded(
+              child: Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(color: _cream, fontSize: 21),
               ),
-              Text(subtitle, style: TextStyle(color: _muted, fontSize: 13)),
-            ],
-          ),
-          SizedBox(width: 24),
-        ],
+            ),
+            SizedBox(width: 16),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  NumberFormat.decimalPattern().format(value),
+                  style: TextStyle(color: _cream, fontSize: 21),
+                ),
+                Text(subtitle, style: TextStyle(color: _muted, fontSize: 13)),
+              ],
+            ),
+            SizedBox(width: onRemove == null ? 24 : 8),
+            if (onRemove != null)
+              IconButton(
+                tooltip: 'Remove friend',
+                visualDensity: VisualDensity.compact,
+                onPressed: onRemove,
+                icon: Icon(Icons.person_remove_alt_1, color: _muted, size: 22),
+              ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _historyBar(Map<String, dynamic> summary) {
+  Widget _groupsLeaderboard() {
+    final user = _user;
+    if (user == null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+        child: Text(
+          'Sign in to create and compete in groups.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: _muted, fontSize: 17),
+        ),
+      );
+    }
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('groups')
+          .where('memberIds', arrayContains: user.uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        final groups = snapshot.data?.docs ?? [];
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 26),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        return FutureBuilder<List<_GroupLeaderboardItem>>(
+          future: _groupLeaderboardItems(groups),
+          builder: (context, groupSnapshot) {
+            final rankedGroups =
+                groupSnapshot.data ?? const <_GroupLeaderboardItem>[];
+
+            if (groupSnapshot.connectionState == ConnectionState.waiting &&
+                rankedGroups.isEmpty &&
+                groups.isNotEmpty) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 26),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+
+            return Column(
+              children: [
+                if (groups.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(26, 16, 26, 10),
+                    child: Text(
+                      'No groups yet. Create one to compare calories and workout minutes with friends.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: _muted,
+                        fontSize: 17,
+                        height: 1.25,
+                      ),
+                    ),
+                  )
+                else
+                  ...rankedGroups.indexed.map((entry) {
+                    final index = entry.$1;
+                    final group = entry.$2;
+
+                    return _rankRow(
+                      rank: index + 1,
+                      icon: Icons.groups,
+                      name: group.name,
+                      value: group.totals.calories,
+                      subtitle:
+                          '${group.memberCount} members · ${group.totals.minutes} min',
+                      onTap: () => _showGroupDetailsDialog(group.doc),
+                    );
+                  }),
+                _rankRow(
+                  rank: rankedGroups.length + 1,
+                  icon: Icons.group_add_outlined,
+                  name: 'Create a group',
+                  value: 0,
+                  subtitle: 'Name it and invite friends',
+                  onTap: _showCreateGroupSheet,
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<List<_GroupLeaderboardItem>> _groupLeaderboardItems(
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> groups,
+  ) async {
+    final items = <_GroupLeaderboardItem>[];
+
+    for (final doc in groups) {
+      final data = doc.data();
+      final members = List<String>.from(data['memberIds'] ?? const []);
+      final totals = await _groupTotalsForMemberIds(members, _period);
+      items.add(
+        _GroupLeaderboardItem(
+          doc: doc,
+          name: (data['name'] as String?) ?? 'Workout group',
+          memberCount: members.length,
+          totals: totals,
+        ),
+      );
+    }
+
+    items.sort((a, b) {
+      final calorieCompare = b.totals.calories.compareTo(a.totals.calories);
+      if (calorieCompare != 0) return calorieCompare;
+      return a.name.compareTo(b.name);
+    });
+
+    return items;
+  }
+
+  Future<_GroupTotals> _groupTotalsForMemberIds(
+    List<String> memberIds,
+    MetricPeriod period,
+  ) async {
+    final uniqueIds = memberIds.toSet().toList();
+    var calories = 0;
+    var minutes = 0;
+
+    for (final memberId in uniqueIds) {
+      final aggregate = await _aggregateForUserPeriod(memberId, period);
+      calories += aggregate.calories;
+      minutes += aggregate.minutes;
+    }
+
+    return _GroupTotals(calories: calories, minutes: minutes);
+  }
+
+  Future<List<_GroupMemberPerformance>> _groupMemberPerformance(
+    List<String> memberIds,
+  ) async {
+    final uniqueIds = memberIds.toSet().toList();
+    if (uniqueIds.isEmpty) return [];
+
+    final users = await _usersByIds(uniqueIds);
+    final today = WorkoutService.dateKey(DateTime.now());
+    final results = <_GroupMemberPerformance>[];
+
+    for (final memberId in uniqueIds) {
+      final userData = users[memberId] ?? {};
+      final workout = await FirebaseFirestore.instance
+          .collection('workouts')
+          .doc('${memberId}_$today')
+          .get();
+      final summary = workout.data();
+      final calories = WorkoutService.caloriesFromSummary(summary);
+      final minutes = WorkoutService.minutesFromSummary(summary);
+      final goal =
+          (userData['goalCalories'] as num?)?.toInt() ??
+          (summary?['goalCalories'] as num?)?.toInt() ??
+          0;
+
+      results.add(
+        _GroupMemberPerformance(
+          userId: memberId,
+          name: (userData['name'] as String?)?.trim().isNotEmpty == true
+              ? (userData['name'] as String).trim()
+              : (userData['username'] as String?)?.trim().isNotEmpty == true
+              ? (userData['username'] as String).trim()
+              : 'Member',
+          username: (userData['username'] as String?) ?? '',
+          calories: calories,
+          minutes: minutes,
+          goalCalories: goal,
+        ),
+      );
+    }
+
+    results.sort((a, b) => b.calories.compareTo(a.calories));
+    return results;
+  }
+
+  Future<Map<String, Map<String, dynamic>>> _usersByIds(
+    List<String> userIds,
+  ) async {
+    final db = FirebaseFirestore.instance;
+    final users = <String, Map<String, dynamic>>{};
+
+    for (var start = 0; start < userIds.length; start += 10) {
+      final chunk = userIds.skip(start).take(10).toList();
+      if (chunk.isEmpty) continue;
+
+      final snapshot = await db
+          .collection('users')
+          .where(FieldPath.documentId, whereIn: chunk)
+          .get();
+
+      for (final doc in snapshot.docs) {
+        users[doc.id] = doc.data();
+      }
+    }
+
+    return users;
+  }
+
+  Future<Set<String>> _currentFriendIds() async {
+    final user = _user;
+    if (user == null) return {};
+
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+    return List<String>.from(doc.data()?['friends'] ?? const []).toSet();
+  }
+
+  Future<_GroupDetailsData> _groupDetailsData(List<String> memberIds) async {
+    final results = await Future.wait([
+      _groupMemberPerformance(memberIds),
+      _currentFriendIds(),
+    ]);
+
+    return _GroupDetailsData(
+      members: results[0] as List<_GroupMemberPerformance>,
+      friendIds: results[1] as Set<String>,
+    );
+  }
+
+  Widget _historyBar(Map<String, dynamic> summary, int scaleValue) {
     final calories = WorkoutService.caloriesFromSummary(summary);
     final minutes = WorkoutService.minutesFromSummary(summary);
     final value = _historyValueForSummaries([summary]);
-    final maxWidth = math.max(0.22, math.min(1.0, value / 1000));
+    final widthFactor = value == 0
+        ? 0.0
+        : math.min(1.0, value / math.max(1, scaleValue));
     final label = _friendlyDate(summary);
+    final valueText = _formatHistoryValue(
+      calories,
+      1,
+      compact: false,
+      includeUnit: false,
+    );
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 18),
@@ -1338,30 +2664,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                FractionallySizedBox(
-                  widthFactor: maxWidth,
-                  child: Container(
-                    height: 42,
-                    alignment: Alignment.centerLeft,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: _accent,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      _formatHistoryValue(
-                        calories,
-                        1,
-                        compact: false,
-                        includeUnit: false,
-                      ),
-                      style: TextStyle(
-                        color: _background,
-                        fontSize: 19,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
+                _historyValueBar(
+                  valueText: valueText,
+                  widthFactor: widthFactor,
+                  fontSize: 19,
                 ),
                 SizedBox(height: 5),
                 Text('$minutes min trained', style: TextStyle(color: _muted)),
@@ -1894,6 +3200,853 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Future<void> _showGroupDetailsDialog(
+    QueryDocumentSnapshot<Map<String, dynamic>> groupDoc,
+  ) async {
+    final data = groupDoc.data();
+    final name = (data['name'] as String?) ?? 'Workout group';
+    final memberIds = List<String>.from(data['memberIds'] ?? const []);
+    final ownerId =
+        (data['ownerId'] as String?) ?? data['createdBy'] as String?;
+    final pendingInvites =
+        (data['pendingInviteIds'] as List<dynamic>? ?? const []).length;
+    final currentUserId = _user?.uid;
+    final detailsFuture = _groupDetailsData(memberIds);
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: _surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+            side: BorderSide(color: _divider),
+          ),
+          title: Text(name, style: TextStyle(color: _cream)),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: FutureBuilder<_GroupDetailsData>(
+              future: detailsFuture,
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const SizedBox(
+                    height: 180,
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+
+                final details = snapshot.data!;
+                final members = details.members;
+                final dialogFriendIds = {...details.friendIds};
+                final calories = members.fold<int>(
+                  0,
+                  (total, member) => total + member.calories,
+                );
+                final minutes = members.fold<int>(
+                  0,
+                  (total, member) => total + member.minutes,
+                );
+                final goalsMet = members
+                    .where((member) => member.goalMet)
+                    .length;
+
+                return StatefulBuilder(
+                  builder: (context, setDialogState) {
+                    return SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              _groupStatPill(
+                                'Calories',
+                                NumberFormat.compact().format(calories),
+                              ),
+                              SizedBox(width: 10),
+                              _groupStatPill('Minutes', '$minutes'),
+                              SizedBox(width: 10),
+                              _groupStatPill(
+                                'Goals',
+                                '$goalsMet/${members.length}',
+                              ),
+                            ],
+                          ),
+                          if (pendingInvites > 0) ...[
+                            SizedBox(height: 12),
+                            Text(
+                              '$pendingInvites pending invite${pendingInvites == 1 ? '' : 's'}',
+                              style: TextStyle(color: _muted, fontSize: 13),
+                            ),
+                          ],
+                          SizedBox(height: 16),
+                          Divider(color: _divider),
+                          SizedBox(height: 6),
+                          if (members.isEmpty)
+                            Text(
+                              'No members found yet.',
+                              style: TextStyle(color: _muted, fontSize: 16),
+                            )
+                          else
+                            ...members.indexed.map((entry) {
+                              final index = entry.$1;
+                              final member = entry.$2;
+                              final isOwner = member.userId == ownerId;
+                              final isCurrentUser =
+                                  member.userId == currentUserId;
+                              final isFriend =
+                                  isCurrentUser ||
+                                  dialogFriendIds.contains(member.userId);
+                              return _groupMemberRow(
+                                index + 1,
+                                member,
+                                isOwner,
+                                isFriend: isFriend,
+                                isCurrentUser: isCurrentUser,
+                                onAddFriend: isFriend
+                                    ? null
+                                    : () async {
+                                        final sent =
+                                            await _sendFriendRequestToUser(
+                                              friendId: member.userId,
+                                              fallbackUsername:
+                                                  member.username.isNotEmpty
+                                                  ? member.username
+                                                  : member.name,
+                                            );
+                                        if (sent) {
+                                          setDialogState(() {
+                                            dialogFriendIds.add(member.userId);
+                                          });
+                                        }
+                                        return sent;
+                                      },
+                              );
+                            }),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text('Close', style: TextStyle(color: _accent)),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                _showInviteToGroupSheet(groupDoc);
+              },
+              child: Text('Invite', style: TextStyle(color: _accent)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _groupStatPill(String label, String value) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+        decoration: BoxDecoration(
+          color: _selectedSurface,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          children: [
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: _cream,
+                fontWeight: FontWeight.w700,
+                fontSize: 17,
+              ),
+            ),
+            SizedBox(height: 3),
+            Text(label, style: TextStyle(color: _muted, fontSize: 12)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _groupMemberRow(
+    int rank,
+    _GroupMemberPerformance member,
+    bool isOwner, {
+    required bool isFriend,
+    required bool isCurrentUser,
+    Future<bool> Function()? onAddFriend,
+  }) {
+    final progress = member.goalCalories <= 0
+        ? 0.0
+        : math.min(1.0, member.calories / member.goalCalories);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 30,
+            child: Text(
+              '$rank',
+              style: TextStyle(color: _muted, fontWeight: FontWeight.w700),
+            ),
+          ),
+          CircleAvatar(
+            radius: 19,
+            backgroundColor: member.goalMet ? _accent : _selectedSurface,
+            child: Icon(
+              member.goalMet ? Icons.local_fire_department : Icons.person,
+              color: _background,
+              size: 20,
+            ),
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        member.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: _cream,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                    if (isOwner) ...[
+                      SizedBox(width: 6),
+                      Icon(Icons.star, color: _goalLime, size: 15),
+                    ],
+                  ],
+                ),
+                SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 5,
+                    backgroundColor: _divider,
+                    color: member.goalMet ? _accent : _goalLime,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                NumberFormat.compact().format(member.calories),
+                style: TextStyle(color: _cream, fontSize: 16),
+              ),
+              Text(
+                '${member.minutes} min',
+                style: TextStyle(color: _muted, fontSize: 12),
+              ),
+            ],
+          ),
+          SizedBox(width: 8),
+          SizedBox(
+            width: 34,
+            child: isFriend
+                ? Icon(
+                    isCurrentUser ? Icons.person : Icons.check_circle,
+                    color: isCurrentUser ? _muted : _goalLime,
+                    size: 22,
+                  )
+                : IconButton(
+                    tooltip: 'Add friend',
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 34,
+                      minHeight: 34,
+                    ),
+                    onPressed: onAddFriend == null
+                        ? null
+                        : () async {
+                            final sent = await onAddFriend();
+                            if (sent && mounted) setState(() {});
+                          },
+                    icon: Icon(Icons.add_circle, color: _accent, size: 24),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showInviteToGroupSheet(
+    QueryDocumentSnapshot<Map<String, dynamic>> groupDoc,
+  ) async {
+    final user = _user;
+    if (user == null) {
+      _showSnack('Sign in to invite people.');
+      return;
+    }
+
+    final groupData = groupDoc.data();
+    final groupName = (groupData['name'] as String?) ?? 'Workout group';
+    final usernameController = TextEditingController();
+    bool sending = false;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: _background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            Future<void> sendInvite() async {
+              final username = usernameController.text.trim().replaceFirst(
+                '@',
+                '',
+              );
+              if (username.isEmpty) {
+                _showSnack('Enter a username to invite.');
+                return;
+              }
+
+              setSheetState(() => sending = true);
+              try {
+                final invitedUserDoc = await _findUserByUsername(username);
+                if (invitedUserDoc == null) {
+                  _showSnack('Could not find @$username.');
+                  return;
+                }
+
+                final invitedUserId = invitedUserDoc.id;
+                final invitedUsername =
+                    (invitedUserDoc.data()['username'] as String?) ?? username;
+
+                if (invitedUserId == user.uid) {
+                  _showSnack('You are already in this group.');
+                  return;
+                }
+
+                final groupRef = FirebaseFirestore.instance
+                    .collection('groups')
+                    .doc(groupDoc.id);
+                final invitationRef = groupRef
+                    .collection('invitations')
+                    .doc(invitedUserId);
+                final inviteRef = FirebaseFirestore.instance
+                    .collection('group_invites')
+                    .doc();
+                var didSend = false;
+                var message = 'Invite already pending for @$invitedUsername.';
+
+                await FirebaseFirestore.instance.runTransaction((
+                  transaction,
+                ) async {
+                  final latestGroupDoc = await transaction.get(groupRef);
+                  if (!latestGroupDoc.exists) {
+                    throw StateError('Group no longer exists.');
+                  }
+
+                  final latestGroup = latestGroupDoc.data()!;
+                  final memberIds = List<String>.from(
+                    latestGroup['memberIds'] ?? const [],
+                  );
+                  final pendingInviteIds = List<String>.from(
+                    latestGroup['pendingInviteIds'] ?? const [],
+                  );
+
+                  if (memberIds.contains(invitedUserId)) {
+                    message = '@$invitedUsername is already in this group.';
+                    return;
+                  }
+
+                  if (pendingInviteIds.contains(invitedUserId)) {
+                    return;
+                  }
+
+                  final existingInviteDoc = await transaction.get(
+                    invitationRef,
+                  );
+                  if (existingInviteDoc.exists &&
+                      existingInviteDoc.data()?['status'] == 'pending') {
+                    return;
+                  }
+
+                  final invitePayload = {
+                    'fromUserId': user.uid,
+                    'fromUserName': user.displayName ?? user.email ?? 'Burner',
+                    'toUserId': invitedUserId,
+                    'toUserName': invitedUsername,
+                    'groupId': groupDoc.id,
+                    'groupName': groupName,
+                    'status': 'pending',
+                    'createdAt': FieldValue.serverTimestamp(),
+                  };
+
+                  transaction.update(groupRef, {
+                    'pendingInviteIds': FieldValue.arrayUnion([invitedUserId]),
+                    'updatedAt': FieldValue.serverTimestamp(),
+                  });
+                  transaction.set(inviteRef, invitePayload);
+                  transaction.set(invitationRef, {
+                    ...invitePayload,
+                    'inviteId': inviteRef.id,
+                  });
+
+                  didSend = true;
+                  message = 'Invited @$invitedUsername to $groupName.';
+                });
+
+                if (!context.mounted) return;
+                if (didSend) Navigator.of(context).pop();
+                _showSnack(message);
+              } catch (e) {
+                _showSnack('Could not send invite: $e');
+              } finally {
+                if (context.mounted) setSheetState(() => sending = false);
+              }
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 18,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 28,
+              ),
+              child: SafeArea(
+                top: false,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Invite to $groupName',
+                      style: TextStyle(color: _cream, fontSize: 22),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Enter a Burn Camp username. Existing members and pending invites will be skipped.',
+                      style: TextStyle(color: _muted, fontSize: 14),
+                    ),
+                    SizedBox(height: 16),
+                    TextField(
+                      controller: usernameController,
+                      style: TextStyle(color: _cream),
+                      autofocus: true,
+                      decoration: _inputDecoration('Username'),
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (_) {
+                        if (!sending) sendInvite();
+                      },
+                    ),
+                    SizedBox(height: 18),
+                    SizedBox(
+                      height: 50,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _accent,
+                          foregroundColor: _onAccent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        onPressed: sending ? null : sendInvite,
+                        child: sending
+                            ? CircularProgressIndicator(color: _cream)
+                            : Text(
+                                'Send invite',
+                                style: TextStyle(fontSize: 17),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    usernameController.dispose();
+  }
+
+  Future<void> _showCreateGroupSheet() async {
+    final user = _user;
+    if (user == null) {
+      _showSnack('Sign in to create a group.');
+      return;
+    }
+
+    final groupNameController = TextEditingController();
+    final usernameController = TextEditingController();
+    final friendsFuture = _loadFriendOptions(user.uid);
+    final selectedFriendIds = <String>{};
+    final manualUsernames = <String>{};
+    bool saving = false;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: _background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            Future<void> createGroup() async {
+              final groupName = groupNameController.text.trim();
+              if (groupName.isEmpty) {
+                _showSnack('Name your group first.');
+                return;
+              }
+
+              setSheetState(() => saving = true);
+              try {
+                final friends = await friendsFuture;
+                final friendNamesById = {
+                  for (final friend in friends) friend.userId: friend.name,
+                };
+                final resolution = await _resolveInviteIds(
+                  ownerId: user.uid,
+                  manualUsernames: manualUsernames,
+                  selectedFriendIds: selectedFriendIds,
+                );
+
+                if (resolution.missingUsernames.isNotEmpty) {
+                  _showSnack(
+                    'Could not find: ${resolution.missingUsernames.join(', ')}',
+                  );
+                  return;
+                }
+
+                final groupRef = FirebaseFirestore.instance
+                    .collection('groups')
+                    .doc();
+                final inviteIds = resolution.userIds.toList()..sort();
+
+                final batch = FirebaseFirestore.instance.batch();
+                batch.set(groupRef, {
+                  'name': groupName,
+                  'ownerId': user.uid,
+                  'createdBy': user.uid,
+                  'memberIds': [user.uid],
+                  'pendingInviteIds': inviteIds,
+                  'createdAt': FieldValue.serverTimestamp(),
+                  'updatedAt': FieldValue.serverTimestamp(),
+                });
+                batch.set(
+                  FirebaseFirestore.instance.collection('users').doc(user.uid),
+                  {
+                    'groups': FieldValue.arrayUnion([groupRef.id]),
+                    'updatedAt': FieldValue.serverTimestamp(),
+                  },
+                  SetOptions(merge: true),
+                );
+
+                for (final inviteId in inviteIds) {
+                  final inviteRef = FirebaseFirestore.instance
+                      .collection('group_invites')
+                      .doc();
+                  final inviteName =
+                      friendNamesById[inviteId] ??
+                      resolution.usernamesById[inviteId] ??
+                      'Friend';
+                  final invitePayload = {
+                    'fromUserId': user.uid,
+                    'fromUserName': user.displayName ?? user.email ?? 'Burner',
+                    'toUserId': inviteId,
+                    'toUserName': inviteName,
+                    'groupId': groupRef.id,
+                    'groupName': groupName,
+                    'status': 'pending',
+                    'createdAt': FieldValue.serverTimestamp(),
+                  };
+
+                  batch.set(inviteRef, invitePayload);
+                  batch.set(groupRef.collection('invitations').doc(inviteId), {
+                    ...invitePayload,
+                    'inviteId': inviteRef.id,
+                  });
+                }
+
+                await batch.commit();
+
+                if (!context.mounted) return;
+                Navigator.of(context).pop();
+                _showSnack(
+                  inviteIds.isEmpty
+                      ? 'Created $groupName.'
+                      : 'Created $groupName and invited ${inviteIds.length}.',
+                );
+              } catch (e) {
+                _showSnack('Could not create group: $e');
+              } finally {
+                if (mounted) setSheetState(() => saving = false);
+              }
+            }
+
+            void addManualUsername() {
+              final username = usernameController.text.trim().replaceFirst(
+                '@',
+                '',
+              );
+              if (username.isEmpty) return;
+              setSheetState(() {
+                manualUsernames.add(username);
+                usernameController.clear();
+              });
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 18,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 28,
+              ),
+              child: SafeArea(
+                top: false,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Create group',
+                        style: TextStyle(color: _cream, fontSize: 22),
+                      ),
+                      SizedBox(height: 16),
+                      TextField(
+                        controller: groupNameController,
+                        style: TextStyle(color: _cream),
+                        decoration: _inputDecoration('Group name'),
+                      ),
+                      SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: usernameController,
+                              style: TextStyle(color: _cream),
+                              decoration: _inputDecoration('Invite username'),
+                              onSubmitted: (_) => addManualUsername(),
+                            ),
+                          ),
+                          SizedBox(width: 10),
+                          IconButton.filled(
+                            style: IconButton.styleFrom(
+                              backgroundColor: _accent,
+                              foregroundColor: _onAccent,
+                            ),
+                            onPressed: addManualUsername,
+                            icon: const Icon(Icons.add),
+                          ),
+                        ],
+                      ),
+                      if (manualUsernames.isNotEmpty) ...[
+                        SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: manualUsernames.map((username) {
+                            return InputChip(
+                              label: Text('@$username'),
+                              onDeleted: () {
+                                setSheetState(
+                                  () => manualUsernames.remove(username),
+                                );
+                              },
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                      SizedBox(height: 18),
+                      Text(
+                        'Pick from friends',
+                        style: TextStyle(color: _cream, fontSize: 16),
+                      ),
+                      SizedBox(height: 8),
+                      FutureBuilder<List<_GroupInviteOption>>(
+                        future: friendsFuture,
+                        builder: (context, snapshot) {
+                          if (!snapshot.hasData) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 20),
+                              child: Center(child: CircularProgressIndicator()),
+                            );
+                          }
+
+                          final friends = snapshot.data!;
+                          if (friends.isEmpty) {
+                            return Text(
+                              'No friends yet. Add usernames manually above.',
+                              style: TextStyle(color: _muted),
+                            );
+                          }
+
+                          return Column(
+                            children: friends.map((friend) {
+                              final selected = selectedFriendIds.contains(
+                                friend.userId,
+                              );
+                              return CheckboxListTile(
+                                contentPadding: EdgeInsets.zero,
+                                value: selected,
+                                activeColor: _accent,
+                                checkColor: _onAccent,
+                                title: Text(
+                                  friend.name,
+                                  style: TextStyle(color: _cream),
+                                ),
+                                subtitle: Text(
+                                  '@${friend.username}',
+                                  style: TextStyle(color: _muted),
+                                ),
+                                onChanged: (checked) {
+                                  setSheetState(() {
+                                    if (checked == true) {
+                                      selectedFriendIds.add(friend.userId);
+                                    } else {
+                                      selectedFriendIds.remove(friend.userId);
+                                    }
+                                  });
+                                },
+                              );
+                            }).toList(),
+                          );
+                        },
+                      ),
+                      SizedBox(height: 18),
+                      SizedBox(
+                        height: 50,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _accent,
+                            foregroundColor: _onAccent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          onPressed: saving ? null : createGroup,
+                          child: saving
+                              ? CircularProgressIndicator(color: _cream)
+                              : Text(
+                                  'Create group',
+                                  style: TextStyle(fontSize: 17),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<List<_GroupInviteOption>> _loadFriendOptions(String userId) async {
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .get();
+    final friendIds = List<String>.from(userDoc.data()?['friends'] ?? const []);
+    if (friendIds.isEmpty) return [];
+
+    final users = await _usersByIds(friendIds);
+    return friendIds
+        .where(users.containsKey)
+        .map((friendId) {
+          final data = users[friendId]!;
+          final username = (data['username'] as String?)?.trim() ?? '';
+          final name = (data['name'] as String?)?.trim();
+          return _GroupInviteOption(
+            userId: friendId,
+            name: name?.isNotEmpty == true ? name! : username,
+            username: username,
+          );
+        })
+        .where((friend) => friend.username.isNotEmpty || friend.name.isNotEmpty)
+        .toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+  }
+
+  Future<QueryDocumentSnapshot<Map<String, dynamic>>?> _findUserByUsername(
+    String rawUsername,
+  ) async {
+    final username = rawUsername.trim().replaceFirst('@', '');
+    if (username.isEmpty) return null;
+
+    var snapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .where('username', isEqualTo: username)
+        .limit(1)
+        .get();
+
+    if (snapshot.docs.isEmpty && username != username.toLowerCase()) {
+      snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('username', isEqualTo: username.toLowerCase())
+          .limit(1)
+          .get();
+    }
+
+    if (snapshot.docs.isEmpty) return null;
+    return snapshot.docs.first;
+  }
+
+  Future<_InviteResolution> _resolveInviteIds({
+    required String ownerId,
+    required Set<String> manualUsernames,
+    required Set<String> selectedFriendIds,
+  }) async {
+    final ids = selectedFriendIds.where((id) => id != ownerId).toSet();
+    final usernamesById = <String, String>{};
+    final missing = <String>[];
+
+    for (final rawUsername in manualUsernames) {
+      final username = rawUsername.trim().replaceFirst('@', '');
+      if (username.isEmpty) continue;
+
+      final doc = await _findUserByUsername(username);
+      if (doc == null) {
+        missing.add(username);
+        continue;
+      }
+
+      if (doc.id == ownerId) continue;
+      ids.add(doc.id);
+      usernamesById[doc.id] = (doc.data()['username'] as String?) ?? username;
+    }
+
+    return _InviteResolution(
+      userIds: ids,
+      usernamesById: usernamesById,
+      missingUsernames: missing,
+    );
+  }
+
   Future<void> _showHiddenFriendsSheet(Map<String, dynamic> data) async {
     final hidden = List<String>.from(data['hiddenFriends'] ?? []);
     final controller = TextEditingController();
@@ -1924,13 +4077,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
               _primarySheetButton(
                 label: 'Hide friend',
                 onPressed: () async {
-                  final username = controller.text.trim();
+                  final username = controller.text.trim().replaceFirst('@', '');
                   if (username.isEmpty) return;
-                  if (hidden.contains(username)) {
+
+                  final friendDoc = await _findUserByUsername(username);
+                  if (friendDoc == null) {
+                    _showSnack('Could not find @$username.');
+                    return;
+                  }
+
+                  final friendIds = List<String>.from(
+                    data['friends'] ?? const [],
+                  );
+                  if (!friendIds.contains(friendDoc.id)) {
+                    _showSnack('@$username is not in your friends list.');
+                    return;
+                  }
+
+                  if (hidden.contains(friendDoc.id)) {
                     controller.clear();
                     return;
                   }
-                  await saveHidden([...hidden, username]);
+                  await saveHidden([...hidden, friendDoc.id]);
                   controller.clear();
                 },
               ),
@@ -1942,14 +4110,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 )
               else
                 ...hidden.map(
-                  (username) => ListTile(
+                  (hiddenFriend) => ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text(username, style: TextStyle(color: _cream)),
+                    title: FutureBuilder<String>(
+                      future: _hiddenFriendLabel(hiddenFriend),
+                      builder: (context, snapshot) {
+                        return Text(
+                          snapshot.data ?? hiddenFriend,
+                          style: TextStyle(color: _cream),
+                        );
+                      },
+                    ),
                     trailing: IconButton(
                       icon: Icon(Icons.close, color: _muted),
                       onPressed: () async {
                         await saveHidden(
-                          hidden.where((item) => item != username).toList(),
+                          hidden.where((item) => item != hiddenFriend).toList(),
                         );
                       },
                     ),
@@ -1960,6 +4136,151 @@ class _DashboardScreenState extends State<DashboardScreen> {
         },
       ),
     );
+  }
+
+  Future<String> _hiddenFriendLabel(String hiddenFriend) async {
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(hiddenFriend)
+        .get();
+    if (!doc.exists) return hiddenFriend;
+
+    final data = doc.data() ?? {};
+    final username = (data['username'] as String?)?.trim();
+    if (username?.isNotEmpty == true) return '@$username';
+
+    final name = (data['name'] as String?)?.trim();
+    if (name?.isNotEmpty == true) return name!;
+
+    return hiddenFriend;
+  }
+
+  Future<void> _showWorkoutTrackingSheet(String currentMode) async {
+    final isIos = defaultTargetPlatform == TargetPlatform.iOS;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: _background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Workout tracking',
+                  style: TextStyle(color: _cream, fontSize: 22),
+                ),
+                SizedBox(height: 16),
+                _trackingModeOption(
+                  title: 'Manual entry',
+                  subtitle: 'Type calories burned and minutes trained.',
+                  icon: Icons.edit_note,
+                  selected: currentMode == 'manual',
+                  onTap: () async {
+                    await _setWorkoutTrackingMode('manual');
+                    if (!context.mounted) return;
+                    Navigator.of(context).pop();
+                    _showManualTrackingPage();
+                  },
+                ),
+                SizedBox(height: 12),
+                _trackingModeOption(
+                  title: 'Sync Apple Health',
+                  subtitle: isIos
+                      ? 'Use Health app workouts when HealthKit sync is connected.'
+                      : 'Available on iPhone only.',
+                  icon: Icons.favorite,
+                  selected: currentMode == 'appleHealth',
+                  enabled: isIos,
+                  onTap: isIos
+                      ? () async {
+                          await _setWorkoutTrackingMode('appleHealth');
+                          if (!context.mounted) return;
+                          Navigator.of(context).pop();
+                          _showAppleHealthTrackingPage();
+                        }
+                      : null,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _trackingModeOption({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required bool selected,
+    required VoidCallback? onTap,
+    bool enabled = true,
+  }) {
+    return InkWell(
+      onTap: enabled ? onTap : null,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: selected ? _selectedSurface : _surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: selected ? _accent : _divider),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: enabled ? _accent : _divider,
+              child: Icon(icon, color: _background, size: 24),
+            ),
+            SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: enabled ? _cream : _muted,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(subtitle, style: TextStyle(color: _muted, fontSize: 14)),
+                ],
+              ),
+            ),
+            SizedBox(width: 10),
+            if (selected)
+              Icon(Icons.check_circle, color: _accent)
+            else
+              Icon(Icons.chevron_right, color: enabled ? _muted : _divider),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _setWorkoutTrackingMode(String mode) async {
+    await _updateUserSettings({'workoutTrackingMode': mode});
+    _showSnack(
+      mode == 'appleHealth'
+          ? 'Apple Health sync selected.'
+          : 'Manual tracking selected.',
+    );
+  }
+
+  String _workoutTrackingModeLabel(String mode) {
+    return mode == 'appleHealth' ? 'Apple Health' : 'Manual';
   }
 
   void _showManualTrackingPage() {
@@ -2004,6 +4325,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  void _showAppleHealthTrackingPage() {
+    _pushDetailPage(
+      title: 'Apple Health',
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(24, 36, 24, 28),
+        children: [
+          Icon(Icons.favorite, color: _accent, size: 54),
+          SizedBox(height: 18),
+          Text(
+            'Apple Health sync selected',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: _cream, fontSize: 24),
+          ),
+          SizedBox(height: 16),
+          Text(
+            'Burn Camp is set to use Apple Health as the workout source on iPhone. Native HealthKit permission and workout import still need to be connected before calories and minutes can sync automatically.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: _muted, fontSize: 18, height: 1.35),
+          ),
+          const SizedBox(height: 34),
+          _infoBlock(
+            'What will sync',
+            'Calories burned and workout duration from Health app workouts.',
+          ),
+          _infoBlock(
+            'Manual backup',
+            'You can still add a workout manually if Health sync is unavailable.',
+          ),
+          _infoBlock(
+            'Next native step',
+            'Add HealthKit capability, request workout/active energy permissions, then import Health samples into the workouts collection.',
+          ),
+          SizedBox(height: 28),
+          _primarySheetButton(
+            label: 'Add manual workout',
+            onPressed: _showAddWorkoutSheet,
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showManageGroupsPage() {
     final user = _user;
     _pushDetailPage(
@@ -2027,9 +4390,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     _primarySheetButton(
                       label: 'Create group',
-                      onPressed: () => _showSnack(
-                        'Group creation screen can be connected next.',
-                      ),
+                      onPressed: _showCreateGroupSheet,
                     ),
                     SizedBox(height: 20),
                     if (groups.isEmpty)
@@ -2047,6 +4408,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           title: (data['name'] as String?) ?? 'Workout group',
                           subtitle: '$members members',
                           icon: Icons.groups,
+                          onTap: () => _showGroupDetailsDialog(doc),
                         );
                       }),
                   ],
@@ -2504,6 +4866,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return (calories / days).round();
   }
 
+  int _averagePositiveHistoryValue(Iterable<int> values) {
+    final positiveValues = values.where((value) => value > 0).toList();
+    if (positiveValues.isEmpty) return 1;
+
+    final total = positiveValues.fold<int>(
+      0,
+      (runningTotal, value) => runningTotal + value,
+    );
+    return math.max(1, (total / positiveValues.length).round());
+  }
+
+  double _measureTextWidth(String text, TextStyle style) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      maxLines: 1,
+      textDirection: ui.TextDirection.ltr,
+    )..layout();
+    return painter.width;
+  }
+
   String _formatHistoryValue(
     int calories,
     int days, {
@@ -2635,11 +5017,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return '${best.key} · ${NumberFormat.compact().format(best.value)} cals';
   }
 
-  int _botValue(int userCalories, double factor) {
-    if (userCalories <= 0) return (350 * factor).round();
-    return (userCalories * factor).round();
-  }
-
   Future<void> _logout() async {
     await FirebaseAuth.instance.signOut();
     if (!mounted) return;
@@ -2656,6 +5033,121 @@ class _MetricAggregate {
     required this.calories,
     required this.minutes,
     required this.days,
+  });
+}
+
+class _GroupTotals {
+  final int calories;
+  final int minutes;
+
+  const _GroupTotals({required this.calories, required this.minutes});
+}
+
+class _GroupLeaderboardItem {
+  final QueryDocumentSnapshot<Map<String, dynamic>> doc;
+  final String name;
+  final int memberCount;
+  final _GroupTotals totals;
+
+  const _GroupLeaderboardItem({
+    required this.doc,
+    required this.name,
+    required this.memberCount,
+    required this.totals,
+  });
+}
+
+class _LeaderboardMember {
+  final String userId;
+  final String name;
+  final int calories;
+  final int minutes;
+  final bool isCurrentUser;
+  final bool isBot;
+
+  const _LeaderboardMember({
+    required this.userId,
+    required this.name,
+    required this.calories,
+    required this.minutes,
+    this.isCurrentUser = false,
+    this.isBot = false,
+  });
+
+  bool get canRemove => !isCurrentUser && !isBot;
+  bool get canMessage => !isCurrentUser && !isBot;
+
+  IconData get icon {
+    if (isCurrentUser) return Icons.person;
+    if (isBot) return Icons.smart_toy_outlined;
+    return Icons.local_fire_department;
+  }
+}
+
+class _ConversationThread {
+  final String conversationId;
+  final String otherUserId;
+  final String otherName;
+  final String lastText;
+  final DateTime lastAt;
+
+  const _ConversationThread({
+    required this.conversationId,
+    required this.otherUserId,
+    required this.otherName,
+    required this.lastText,
+    required this.lastAt,
+  });
+}
+
+class _GroupDetailsData {
+  final List<_GroupMemberPerformance> members;
+  final Set<String> friendIds;
+
+  const _GroupDetailsData({required this.members, required this.friendIds});
+}
+
+class _GroupMemberPerformance {
+  final String userId;
+  final String name;
+  final String username;
+  final int calories;
+  final int minutes;
+  final int goalCalories;
+
+  const _GroupMemberPerformance({
+    required this.userId,
+    required this.name,
+    required this.username,
+    required this.calories,
+    required this.minutes,
+    required this.goalCalories,
+  });
+
+  bool get goalMet => goalCalories > 0 && calories >= goalCalories;
+}
+
+class _GroupInviteOption {
+  final String userId;
+  final String name;
+  final String username;
+
+  const _GroupInviteOption({
+    required this.userId,
+    required this.name,
+    required this.username,
+  });
+}
+
+class _InviteResolution {
+  final Set<String> userIds;
+  final Map<String, String> usernamesById;
+  final List<String> missingUsernames;
+
+  const _InviteResolution({
+    required this.userIds,
+    required this.usernamesById,
+    required this.missingUsernames,
   });
 }
 
@@ -2693,25 +5185,27 @@ class _DashboardDetailPage extends StatelessWidget {
     final isLight = Theme.of(context).brightness == Brightness.light;
     final foreground = isLight ? ClaudePalette.charcoal : ClaudePalette.cream;
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(
+    return AppGradientBackground(
+      child: Scaffold(
         backgroundColor: Colors.transparent,
-        leading: IconButton(
-          icon: Icon(Icons.chevron_left, color: foreground, size: 34),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        centerTitle: true,
-        title: Text(
-          title,
-          style: TextStyle(
-            color: foreground,
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          leading: IconButton(
+            icon: Icon(Icons.chevron_left, color: foreground, size: 34),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          centerTitle: true,
+          title: Text(
+            title,
+            style: TextStyle(
+              color: foreground,
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
+        body: child,
       ),
-      body: child,
     );
   }
 }

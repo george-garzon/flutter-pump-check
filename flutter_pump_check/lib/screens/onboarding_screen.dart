@@ -45,14 +45,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return null;
   }
 
-  Future<bool> _isUsernameTaken(String username) async {
+  Future<bool> _isUsernameTaken(String username, String currentUserId) async {
     final snapshot = await FirebaseFirestore.instance
         .collection('users')
         .where('username', isEqualTo: username)
         .limit(1)
         .get();
 
-    return snapshot.docs.isNotEmpty;
+    return snapshot.docs.any((doc) => doc.id != currentUserId);
   }
 
   Future<void> _saveProfile() async {
@@ -69,7 +69,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     try {
       // 🔹 Check if username is already taken
-      final taken = await _isUsernameTaken(username);
+      final taken = await _isUsernameTaken(username, user.uid);
       if (!mounted) return;
       if (taken) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -85,6 +85,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         'username': username,
         'goalCalories': goal,
         'defaultWorkoutMinutes': 30,
+        'workoutTrackingMode': 'manual',
         'streakMode': 'strict',
         'themeMode': 'dark',
         'notificationsEnabled': true,
@@ -95,7 +96,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         'createdAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-      // if (mounted) Navigator.pushReplacementNamed(context, '/dashboard');
+      if (!mounted) return;
+      Navigator.of(
+        context,
+      ).pushNamedAndRemoveUntil('/dashboard', (route) => false);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(

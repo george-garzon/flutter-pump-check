@@ -80,11 +80,23 @@ class _SocialScreenState extends State<SocialScreen> {
 
       final groupRef = db.collection('groups').doc(groupId);
       await db.runTransaction((t) async {
-        final snap = await t.get(groupRef);
-        final members = List<String>.from(snap['memberIds'] ?? []);
-        if (!members.contains(userId)) members.add(userId);
-        t.update(groupRef, {'memberIds': members});
-        t.update(doc.reference, {'status': 'accepted'});
+        t.set(groupRef, {
+          'memberIds': FieldValue.arrayUnion([userId]),
+          'pendingInviteIds': FieldValue.arrayRemove([userId]),
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+        t.update(doc.reference, {
+          'status': 'accepted',
+          'respondedAt': FieldValue.serverTimestamp(),
+        });
+        t.set(db.collection('users').doc(userId), {
+          'groups': FieldValue.arrayUnion([groupId]),
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+        t.set(groupRef.collection('invitations').doc(userId), {
+          'status': 'accepted',
+          'respondedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
       });
 
       debugPrint("✅ Added $userId to group $groupId successfully");
@@ -98,7 +110,28 @@ class _SocialScreenState extends State<SocialScreen> {
 
   // 🔹 Decline a group invite
   Future<void> declineInvite(DocumentSnapshot doc) async {
-    await doc.reference.update({'status': 'declined'});
+    final data = doc.data() as Map<String, dynamic>?;
+    final groupId = data?['groupId'] as String?;
+    final batch = db.batch();
+
+    batch.update(doc.reference, {
+      'status': 'declined',
+      'respondedAt': FieldValue.serverTimestamp(),
+    });
+
+    if (groupId != null) {
+      final groupRef = db.collection('groups').doc(groupId);
+      batch.set(groupRef, {
+        'pendingInviteIds': FieldValue.arrayRemove([user.uid]),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      batch.set(groupRef.collection('invitations').doc(user.uid), {
+        'status': 'declined',
+        'respondedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    }
+
+    await batch.commit();
   }
 
   // 🔹 Accept friend request
