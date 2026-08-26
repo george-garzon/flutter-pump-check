@@ -1,8 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_pump_check/theme/theme.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -20,6 +24,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
 
   String? _profilePhotoUrl;
+  File? _selectedPhoto;
 
   @override
   void initState() {
@@ -62,25 +67,113 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final newName = nameController.text.trim();
       final newGoal = int.tryParse(goalController.text.trim()) ?? 45;
 
+      var nextPhotoUrl = _profilePhotoUrl ?? '';
+      if (_selectedPhoto != null) {
+        nextPhotoUrl = await _uploadProfilePhoto(_selectedPhoto!);
+      }
+
       await user.updateDisplayName(newName);
+      await user.updatePhotoURL(
+        nextPhotoUrl.trim().isEmpty ? null : nextPhotoUrl,
+      );
 
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
         'name': newName,
         'goalMinutes': newGoal,
-        'photoUrl': _profilePhotoUrl, // ✅ keep Firestore as source of truth
+        'photoUrl': nextPhotoUrl, // ✅ keep Firestore as source of truth
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
+      _profilePhotoUrl = nextPhotoUrl;
+      _selectedPhoto = null;
+
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile updated successfully ✅')),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
-      setState(() => _isSaving = false);
+      if (mounted) setState(() => _isSaving = false);
     }
+  }
+
+  Future<String> _uploadProfilePhoto(File imageFile) async {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final ref = FirebaseStorage.instance
+        .ref()
+        .child('profile_photos')
+        .child(user.uid)
+        .child('profile-$timestamp.jpg');
+    final task = await ref.putFile(
+      imageFile,
+      SettableMetadata(contentType: 'image/jpeg'),
+    );
+    return task.ref.getDownloadURL();
+  }
+
+  Future<void> _pickProfilePhoto(ImageSource source) async {
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: source,
+        imageQuality: 88,
+        maxWidth: 900,
+      );
+      if (picked == null) return;
+      if (!mounted) return;
+      setState(() => _selectedPhoto = File(picked.path));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not choose photo: $e')));
+    }
+  }
+
+  Future<void> _showPhotoSourceSheet() {
+    return showModalBottomSheet<void>(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt_outlined),
+                title: const Text('Take photo'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickProfilePhoto(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: const Text('Choose from camera roll'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickProfilePhoto(ImageSource.gallery);
+                },
+              ),
+              if ((_profilePhotoUrl ?? '').isNotEmpty || _selectedPhoto != null)
+                ListTile(
+                  leading: const Icon(Icons.delete_outline),
+                  title: const Text('Remove current photo'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    setState(() {
+                      _selectedPhoto = null;
+                      _profilePhotoUrl = '';
+                    });
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   /// Log out
@@ -100,6 +193,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     } catch (e) {
       debugPrint("Logout error: $e");
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text("Logout failed: $e")));
@@ -129,19 +223,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             // Avatar + Email
             GestureDetector(
-              onTap: () async {
-                // Later you can allow image upload here
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Profile picture editing coming soon! 😎'),
-                  ),
-                );
-              },
+              onTap: _showPhotoSourceSheet,
               child: CircleAvatar(
                 radius: 45,
-                backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
+                backgroundColor: theme.colorScheme.primary.withValues(
+                  alpha: 0.2,
+                ),
                 child: ClipOval(
-                  child: photoUrl != null && photoUrl.isNotEmpty
+                  child: _selectedPhoto != null
+                      ? Image.file(
+                          _selectedPhoto!,
+                          fit: BoxFit.cover,
+                          width: 90,
+                          height: 90,
+                        )
+                      : photoUrl != null && photoUrl.isNotEmpty
                       ? Image.network(
                           photoUrl,
                           fit: BoxFit.cover,

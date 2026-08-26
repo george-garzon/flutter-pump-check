@@ -1,11 +1,18 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class WorkoutService {
   static final _db = FirebaseFirestore.instance;
   static final _auth = FirebaseAuth.instance;
   static final _dateFormatter = DateFormat('yyyy-MM-dd');
+  static final _localSummariesController =
+      StreamController<List<Map<String, dynamic>>>.broadcast();
+  static const _localSummariesKey = 'workouts.localSummaries';
 
   static String dateKey(DateTime date) => _dateFormatter.format(date);
 
@@ -22,15 +29,27 @@ class WorkoutService {
     return DateTime(date.year, date.month);
   }
 
-  static Future<void> logWorkout({
+  static Future<bool> logWorkout({
     required int caloriesBurned,
     required int minutesTrained,
     DateTime? date,
     String? workoutType,
     String? notes,
+    String? source,
+    String? externalId,
   }) async {
     final user = _auth.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      return _logLocalWorkout(
+        caloriesBurned: caloriesBurned,
+        minutesTrained: minutesTrained,
+        date: date,
+        workoutType: workoutType,
+        notes: notes,
+        source: source,
+        externalId: externalId,
+      );
+    }
 
     final entryDate = startOfDay(date ?? DateTime.now());
     final key = dateKey(entryDate);
@@ -39,7 +58,7 @@ class WorkoutService {
     final entryRef = summaryRef.collection('entries').doc();
     final userRef = _db.collection('users').doc(user.uid);
 
-    await _db.runTransaction((transaction) async {
+    return _db.runTransaction<bool>((transaction) async {
       final userSnap = await transaction.get(userRef);
       final summarySnap = await transaction.get(summaryRef);
 
@@ -51,6 +70,13 @@ class WorkoutService {
       final currentScore = (userData['score'] as num?)?.toInt() ?? 0;
 
       final existing = summarySnap.data() ?? {};
+      final importedIds = List<String>.from(
+        existing['externalWorkoutIds'] ?? const [],
+      );
+      if (externalId != null && importedIds.contains(externalId)) {
+        return false;
+      }
+
       final previousCalories =
           (existing['totalCaloriesBurned'] as num?)?.toInt() ?? 0;
       final previousMinutes =
@@ -75,6 +101,8 @@ class WorkoutService {
         'minutesTrained': minutesTrained,
         'workoutType': workoutType,
         'notes': notes,
+        'source': source ?? 'manual',
+        if (externalId != null) 'externalId': externalId,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
@@ -88,6 +116,8 @@ class WorkoutService {
         'entryCount': previousEntryCount + 1,
         'goalCalories': goalCalories,
         'goalMet': goalMet,
+        if (externalId != null)
+          'externalWorkoutIds': FieldValue.arrayUnion([externalId]),
         'createdAt': summarySnap.exists
             ? existing['createdAt']
             : FieldValue.serverTimestamp(),
@@ -100,17 +130,26 @@ class WorkoutService {
           'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
       }
+
+      return true;
     });
   }
 
   /// Backward-compatible wrapper for older minute-only screens.
-  static Future<void> logPump(int minutes) {
-    return logWorkout(caloriesBurned: 0, minutesTrained: minutes);
+  static Future<void> logPump(int minutes) async {
+    await logWorkout(caloriesBurned: 0, minutesTrained: minutes);
   }
 
   static Future<Map<String, dynamic>?> getToday() async {
     final user = _auth.currentUser;
-    if (user == null) return null;
+    if (user == null) {
+      final today = dateKey(DateTime.now());
+      final summaries = await _localSummaries();
+      for (final summary in summaries) {
+        if (summary['date'] == today) return summary;
+      }
+      return null;
+    }
 
     final today = dateKey(DateTime.now());
     final docId = '${user.uid}_$today';
@@ -122,7 +161,15 @@ class WorkoutService {
 
   static Stream<Map<String, dynamic>?> watchDay({DateTime? date}) {
     final user = _auth.currentUser;
-    if (user == null) return const Stream.empty();
+    if (user == null) {
+      final key = dateKey(date ?? DateTime.now());
+      return watchSummaries().map((summaries) {
+        for (final summary in summaries) {
+          if (summary['date'] == key) return summary;
+        }
+        return null;
+      });
+    }
 
     final key = dateKey(date ?? DateTime.now());
     return _db.collection('workouts').doc('${user.uid}_$key').snapshots().map((
@@ -138,7 +185,9 @@ class WorkoutService {
     int limit = 60,
   }) {
     final user = _auth.currentUser;
-    if (user == null) return const Stream.empty();
+    if (user == null) {
+      return _watchLocalSummaries(from: from, limit: limit);
+    }
 
     Query<Map<String, dynamic>> query = _db
         .collection('workouts')
@@ -184,5 +233,119 @@ class WorkoutService {
     if (date is String) return DateTime.tryParse(date) ?? DateTime(1970);
 
     return DateTime(1970);
+  }
+
+  static Stream<List<Map<String, dynamic>>> _watchLocalSummaries({
+    DateTime? from,
+    int limit = 60,
+  }) async* {
+    yield _filterLocalSummaries(
+      await _localSummaries(),
+      from: from,
+      limit: limit,
+    );
+    yield* _localSummariesController.stream.map(
+      (summaries) => _filterLocalSummaries(summaries, from: from, limit: limit),
+    );
+  }
+
+  static List<Map<String, dynamic>> _filterLocalSummaries(
+    List<Map<String, dynamic>> summaries, {
+    DateTime? from,
+    required int limit,
+  }) {
+    final filtered = summaries.where((summary) {
+      if (from == null) return true;
+      final date = _summaryDate(summary);
+      return !date.isBefore(startOfDay(from));
+    }).toList();
+
+    filtered.sort((a, b) => _summaryDate(b).compareTo(_summaryDate(a)));
+    return filtered.take(limit).toList();
+  }
+
+  static Future<bool> _logLocalWorkout({
+    required int caloriesBurned,
+    required int minutesTrained,
+    DateTime? date,
+    String? workoutType,
+    String? notes,
+    String? source,
+    String? externalId,
+  }) async {
+    final entryDate = startOfDay(date ?? DateTime.now());
+    final key = dateKey(entryDate);
+    final summaries = await _localSummaries();
+    final index = summaries.indexWhere((summary) => summary['date'] == key);
+    final existing = index == -1 ? <String, dynamic>{} : summaries[index];
+    final externalIds = List<String>.from(
+      existing['externalWorkoutIds'] ?? const [],
+    );
+
+    if (externalId != null && externalIds.contains(externalId)) {
+      return false;
+    }
+
+    final previousCalories =
+        (existing['totalCaloriesBurned'] as num?)?.toInt() ?? 0;
+    final previousMinutes =
+        (existing['totalMinutesTrained'] as num?)?.toInt() ?? 0;
+    final previousEntryCount = (existing['entryCount'] as num?)?.toInt() ?? 0;
+    final goalCalories = (existing['goalCalories'] as num?)?.toInt() ?? 500;
+    final totalCalories = previousCalories + caloriesBurned;
+    final totalMinutes = previousMinutes + minutesTrained;
+
+    if (externalId != null) externalIds.add(externalId);
+
+    final summary = {
+      ...existing,
+      'id': 'local_$key',
+      'userId': 'local',
+      'date': key,
+      'totalCaloriesBurned': totalCalories,
+      'totalMinutesTrained': totalMinutes,
+      'entryCount': previousEntryCount + 1,
+      'goalCalories': goalCalories,
+      'goalMet': goalCalories > 0 && totalCalories >= goalCalories,
+      'externalWorkoutIds': externalIds,
+      'lastWorkoutType': workoutType,
+      'lastNotes': notes,
+      'lastSource': source ?? 'manual',
+      'updatedAt': DateTime.now().toIso8601String(),
+      'createdAt':
+          existing['createdAt'] as String? ?? DateTime.now().toIso8601String(),
+    };
+
+    if (index == -1) {
+      summaries.add(summary);
+    } else {
+      summaries[index] = summary;
+    }
+
+    await _saveLocalSummaries(summaries);
+    return true;
+  }
+
+  static Future<List<Map<String, dynamic>>> _localSummaries() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_localSummariesKey);
+    if (raw == null || raw.isEmpty) return [];
+
+    final decoded = jsonDecode(raw);
+    if (decoded is! List) return [];
+
+    return decoded
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+  }
+
+  static Future<void> _saveLocalSummaries(
+    List<Map<String, dynamic>> summaries,
+  ) async {
+    summaries.sort((a, b) => _summaryDate(b).compareTo(_summaryDate(a)));
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_localSummariesKey, jsonEncode(summaries));
+    _localSummariesController.add(summaries);
   }
 }

@@ -35,8 +35,18 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>GADApplicationIdentifier</key>
+	<string>ca-app-pub-3940256099942544~1458002511</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Burn Camp uses the camera so you can create a custom stats share image background.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Burn Camp reads workout calories and duration from Apple Health to update your fitness totals.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Burn Camp may write workout information to Apple Health if you enable workout sync features.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Burn Camp uses your photo library so you can choose a custom stats share image background.</string>
 	<key>GIDClientID</key>
 	<string>460432828885-he1c6m049cqee2cvd2s4th67t84805fd.apps.googleusercontent.com</string>
 	<key>UIApplicationSceneManifest</key>

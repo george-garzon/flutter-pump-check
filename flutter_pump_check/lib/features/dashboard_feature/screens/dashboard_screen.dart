@@ -1,17 +1,30 @@
 import 'dart:math' as math;
+import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:flutter_pump_check/screens/onboarding_screen.dart';
+import 'package:flutter_pump_check/services/apple_health_service.dart';
+import 'package:flutter_pump_check/services/auth/auth_service.dart';
+import 'package:flutter_pump_check/services/onboarding_preferences.dart';
 import 'package:flutter_pump_check/services/workout_service.dart';
+import 'package:flutter_pump_check/features/dashboard_feature/widgets/dashboard_sections.dart';
 import 'package:flutter_pump_check/theme/app_gradient_background.dart';
 import 'package:flutter_pump_check/theme/app_theme_mode.dart';
 import 'package:flutter_pump_check/theme/claude_palette.dart';
 import 'package:flutter_pump_check/utils/messages.dart' as preset_messages;
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 enum MetricPeriod { today, yesterday, week, month }
 
@@ -27,6 +40,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   static const _accent = ClaudePalette.accent;
   static const _goalLime = ClaudePalette.goal;
+  static const _freeGroupLimit = 5;
 
   bool get _isLight => Theme.of(context).brightness == Brightness.light;
   Color get _background =>
@@ -47,6 +61,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   HistoryRange _historyRange = HistoryRange.week;
   bool _historyShowsAverage = true;
   bool _showFriends = true;
+  int _settingsRefresh = 0;
+  bool _syncingAppleHealth = false;
   final TextEditingController _friendUsernameController =
       TextEditingController();
 
@@ -118,17 +134,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             _topHeader(
               title: 'Burn Camp',
-              leading: IconButton(
-                icon: Icon(Icons.ios_share, color: _cream, size: 27),
-                onPressed: () {
-                  Share.share(
-                    'I burned ${aggregate.calories} calories and trained ${aggregate.minutes} minutes in Burn Camp.',
+              leading: Builder(
+                builder: (buttonContext) {
+                  return IconButton(
+                    icon: Icon(Icons.ios_share, color: _cream, size: 27),
+                    onPressed: () {
+                      _openStatsShareScreen(summaries);
+                    },
                   );
                 },
               ),
               trailing: IconButton(
                 icon: Icon(Icons.add, color: _cream, size: 32),
-                onPressed: _showAddWorkoutSheet,
+                onPressed: _showHomeCreateMenu,
               ),
               bottom: _periodTabs(),
             ),
@@ -282,7 +300,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           leading: SizedBox(width: 48),
           trailing: IconButton(
             icon: Icon(Icons.person_add_alt, color: _cream, size: 28),
-            onPressed: _inviteFriends,
+            onPressed: _showAddFriendSheet,
           ),
         ),
         Padding(
@@ -330,25 +348,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 }
 
                 if (threads.isEmpty) {
-                  return ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 38),
-                    children: [
-                      SizedBox(
-                        height: MediaQuery.of(context).size.height * 0.18,
-                      ),
-                      Icon(Icons.forum_outlined, color: _muted, size: 74),
-                      SizedBox(height: 26),
-                      Text(
+                  return DashboardEmptyState(
+                    icon: Icons.forum_outlined,
+                    muted: _muted,
+                    message:
                         'Tap a friend from the leaderboard to send a preset message. Those conversations will show up here.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: _muted,
-                          fontSize: 21,
-                          height: 1.25,
-                        ),
-                      ),
-                    ],
                   );
                 }
 
@@ -373,11 +377,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _topHeader(
           title: 'Alerts',
           leading: SizedBox(width: 48),
-          trailing: IconButton(
-            icon: Icon(Icons.ios_share, color: _cream, size: 27),
-            onPressed: () {
-              Share.share(
-                'Burn Camp keeps me accountable for calories burned and workout minutes.',
+          trailing: Builder(
+            builder: (buttonContext) {
+              return IconButton(
+                icon: Icon(Icons.ios_share, color: _cream, size: 27),
+                onPressed: () {
+                  _shareText(
+                    buttonContext,
+                    'Burn Camp keeps me accountable for calories burned and workout minutes.',
+                  );
+                },
               );
             },
           ),
@@ -959,36 +968,233 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _sendFriendRequest() async {
-    final user = _user;
-    if (user == null) {
-      _showSnack('Sign in to send friend requests.');
-      return;
-    }
-
     final username = _friendUsernameController.text.trim().replaceFirst(
       '@',
       '',
     );
-    if (username.isEmpty) {
+    final sent = await _sendFriendRequestForUsername(username);
+    if (sent) _friendUsernameController.clear();
+  }
+
+  Future<bool> _sendFriendRequestForUsername(String username) async {
+    final user = _user;
+    if (user == null) {
+      _showSnack('Sign in to send friend requests.');
+      return false;
+    }
+
+    final normalizedUsername = username.trim().replaceFirst('@', '');
+    if (normalizedUsername.isEmpty) {
       _showSnack('Enter a username to add.');
-      return;
+      return false;
     }
 
     try {
-      final friendDoc = await _findUserByUsername(username);
+      final friendDoc = await _findUserByUsername(normalizedUsername);
       if (friendDoc == null) {
-        _showSnack('Could not find @$username.');
-        return;
+        _showSnack('Could not find @$normalizedUsername.');
+        return false;
       }
 
-      final sent = await _sendFriendRequestToUser(
+      return await _sendFriendRequestToUser(
         friendId: friendDoc.id,
-        fallbackUsername: username,
+        fallbackUsername: normalizedUsername,
       );
-      if (sent) _friendUsernameController.clear();
     } catch (e) {
       _showSnack('Could not send friend request: $e');
+      return false;
     }
+  }
+
+  Future<void> _showAddFriendSheet() async {
+    final controller = TextEditingController();
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: _background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (sheetContext) {
+        var sending = false;
+
+        return StatefulBuilder(
+          builder: (sheetContext, setSheetState) {
+            Future<void> send() async {
+              if (sending) return;
+
+              setSheetState(() => sending = true);
+              final sent = await _sendFriendRequestForUsername(controller.text);
+              if (!sheetContext.mounted) return;
+              setSheetState(() => sending = false);
+
+              if (sent) {
+                Navigator.of(sheetContext).pop();
+              }
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 18,
+                bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 28,
+              ),
+              child: SafeArea(
+                top: false,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Add friend',
+                      style: TextStyle(color: _cream, fontSize: 22),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      _user == null
+                          ? 'Sign in to send friend requests, or share Burn Camp with someone.'
+                          : 'Enter a Burn Camp username to send a friend request.',
+                      style: TextStyle(color: _muted, fontSize: 15),
+                    ),
+                    SizedBox(height: 16),
+                    TextField(
+                      controller: controller,
+                      enabled: _user != null && !sending,
+                      autofocus: _user != null,
+                      style: TextStyle(color: _cream),
+                      decoration: _inputDecoration('Username'),
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (_) => send(),
+                    ),
+                    SizedBox(height: 16),
+                    if (_user == null)
+                      _primarySheetButton(
+                        label: 'Sign in to add friends',
+                        onPressed: _signInFromSettings,
+                      )
+                    else
+                      _primarySheetButton(
+                        label: sending ? 'Sending...' : 'Send friend request',
+                        onPressed: sending ? () {} : send,
+                      ),
+                    SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: _cream,
+                        side: BorderSide(color: _divider),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                      ),
+                      onPressed: () => _shareText(
+                        sheetContext,
+                        'Join me on Burn Camp — track calories burned, training minutes, and compare workouts with friends.',
+                      ),
+                      icon: const Icon(Icons.ios_share),
+                      label: const Text('Share invite'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _showHomeCreateMenu() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: _background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Create', style: TextStyle(color: _cream, fontSize: 22)),
+                SizedBox(height: 16),
+                _homeCreateOption(
+                  icon: Icons.person_add_alt,
+                  title: 'Add friend',
+                  subtitle: 'Send a friend request by username.',
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    _showAddFriendSheet();
+                  },
+                ),
+                SizedBox(height: 12),
+                _homeCreateOption(
+                  icon: Icons.group_add_outlined,
+                  title: 'Create group',
+                  subtitle: 'Start a group and invite friends.',
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    _showCreateGroupSheet();
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _homeCreateOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: _surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: _divider),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: _accent,
+              child: Icon(icon, color: _background, size: 24),
+            ),
+            SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: _cream,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(subtitle, style: TextStyle(color: _muted, fontSize: 14)),
+                ],
+              ),
+            ),
+            SizedBox(width: 10),
+            Icon(Icons.chevron_right, color: _muted),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<bool> _sendFriendRequestToUser({
@@ -1204,8 +1410,137 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _settingsTab() {
     final user = _user;
     if (user == null) {
-      return Center(
-        child: Text('Not signed in', style: TextStyle(color: _cream)),
+      return FutureBuilder<Map<String, dynamic>>(
+        key: ValueKey(_settingsRefresh),
+        future: _localSettingsData(),
+        builder: (context, snapshot) {
+          final data = snapshot.data ?? {};
+          final goal = _goalCalories(data);
+          final defaultMinutes =
+              (data['defaultWorkoutMinutes'] as num?)?.toInt() ?? 30;
+          final workoutTrackingMode =
+              (data['workoutTrackingMode'] as String?) ?? 'manual';
+          final streakMode = (data['streakMode'] as String?) ?? 'strict';
+          final themeMode = (data['themeMode'] as String?) ?? 'dark';
+          final notificationsEnabled = data['notificationsEnabled'] != false;
+          final hiddenFriends =
+              (data['hiddenFriends'] as List<dynamic>? ?? const []).length;
+
+          return Column(
+            children: [
+              _topHeader(
+                title: 'Settings',
+                leading: const SizedBox(width: 48),
+                trailing: const SizedBox(width: 48),
+              ),
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    const SizedBox(height: 32),
+                    _settingsRow(
+                      'Workout tracking',
+                      _workoutTrackingModeLabel(workoutTrackingMode),
+                      onTap: () =>
+                          _showWorkoutTrackingSheet(workoutTrackingMode),
+                    ),
+                    _settingsRow(
+                      'Daily calorie goal',
+                      '$goal',
+                      onTap: _showGoalSheet,
+                    ),
+                    _settingsRow(
+                      'Default workout duration',
+                      '$defaultMinutes min',
+                      onTap: () => _showDefaultDurationSheet(defaultMinutes),
+                    ),
+                    _settingsRow(
+                      'Streak mode',
+                      _streakModeLabel(streakMode),
+                      onTap: () => _showStreakModeSheet(streakMode),
+                    ),
+                    _settingsRow(
+                      'Theme',
+                      themeModeLabel(themeMode),
+                      onTap: () => _showThemeModeSheet(themeMode),
+                    ),
+                    _settingsRow(
+                      'Notifications',
+                      notificationsEnabled ? 'On' : 'Off',
+                      onTap: () => _toggleNotifications(notificationsEnabled),
+                    ),
+                    SizedBox(height: 28, child: ColoredBox(color: _surface)),
+                    _settingsRow(
+                      'Account',
+                      'Save to email',
+                      onTap: _signInFromSettings,
+                    ),
+                    _settingsRow(
+                      'Reset personalization',
+                      'Restart',
+                      onTap: _resetPersonalization,
+                    ),
+                    _settingsRow('Recaps', 'View', onTap: _showRecapsSheet),
+                    _settingsRow(
+                      'Invite friends',
+                      'Share',
+                      onTap: _inviteFriends,
+                    ),
+                    _settingsRow(
+                      'Hidden friends',
+                      '$hiddenFriends',
+                      onTap: () => _showHiddenFriendsSheet(data),
+                    ),
+                    _settingsRow(
+                      'Manage groups',
+                      '',
+                      onTap: _showManageGroupsPage,
+                    ),
+                    SizedBox(height: 28, child: ColoredBox(color: _surface)),
+                    _settingsRow('Help and feedback', '', onTap: _showHelpPage),
+                    _settingsRow(
+                      'Support Burn Camp',
+                      'Premium',
+                      onTap: _showSupportPage,
+                    ),
+                    _settingsRow(
+                      'Instagram',
+                      '@burncamp',
+                      onTap: () =>
+                          _showSnack('Social links are placeholders for now.'),
+                    ),
+                    _settingsRow(
+                      'TikTok',
+                      '@burncamp',
+                      onTap: () =>
+                          _showSnack('Social links are placeholders for now.'),
+                    ),
+                    SizedBox(height: 28, child: ColoredBox(color: _surface)),
+                    _settingsRow(
+                      'Privacy',
+                      '',
+                      onTap: () => _showInfoPage(
+                        title: 'Privacy',
+                        body:
+                            'Burn Camp works locally first. Sign in only when you want to save and sync your data to an email account.',
+                      ),
+                    ),
+                    _settingsRow(
+                      'Terms',
+                      '',
+                      onTap: () => _showInfoPage(
+                        title: 'Terms',
+                        body:
+                            'Burn Camp is for personal fitness tracking and friendly accountability. Manually entered workouts should reflect your best estimate.',
+                      ),
+                    ),
+                    SizedBox(height: 22),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       );
     }
 
@@ -1276,6 +1611,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     name?.isNotEmpty == true ? name! : 'Profile',
                     onTap: () => _showProfileSheet(data),
                   ),
+                  _settingsRow(
+                    'Account',
+                    user.email ?? 'Signed in',
+                    onTap: () => _showInfoPage(
+                      title: 'Account',
+                      body:
+                          'You are signed in. Burn Camp can sync workouts, groups, friends, and settings for this account.',
+                    ),
+                  ),
+                  _settingsRow(
+                    'Reset personalization',
+                    'Restart',
+                    onTap: _resetPersonalization,
+                  ),
                   _settingsRow('Recaps', 'View', onTap: _showRecapsSheet),
                   _settingsRow(
                     'Invite friends',
@@ -1340,7 +1689,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 13),
                       ),
                       onPressed: _logout,
-                      child: Text('Log out', style: TextStyle(fontSize: 16)),
+                      child: Text(
+                        'Sign out of Google',
+                        style: TextStyle(fontSize: 16),
+                      ),
                     ),
                   ),
                   SizedBox(height: 22),
@@ -1359,123 +1711,55 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required Widget trailing,
     Widget? bottom,
   }) {
-    return Column(
-      children: [
-        SizedBox(
-          height: 86,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                SizedBox(width: 56, child: Center(child: leading)),
-                Expanded(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.local_fire_department,
-                        color: _cream,
-                        size: 24,
-                      ),
-                      SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: _cream,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(width: 56, child: Center(child: trailing)),
-              ],
-            ),
-          ),
-        ),
-        if (bottom != null) bottom,
-      ],
+    return DashboardTopHeader(
+      title: title,
+      leading: leading,
+      trailing: trailing,
+      foreground: _cream,
+      bottom: bottom,
     );
   }
 
   Widget _periodTabs() {
-    const tabs = [
-      (MetricPeriod.today, 'Today'),
-      (MetricPeriod.yesterday, 'Yesterday'),
-      (MetricPeriod.week, 'Week'),
-      (MetricPeriod.month, 'Month'),
+    final tabs = [
+      DashboardSegmentTab.text(value: MetricPeriod.today, label: 'Today'),
+      DashboardSegmentTab.text(
+        value: MetricPeriod.yesterday,
+        label: 'Yesterday',
+      ),
+      DashboardSegmentTab.text(value: MetricPeriod.week, label: 'Week'),
+      DashboardSegmentTab.text(value: MetricPeriod.month, label: 'Month'),
     ];
 
-    return SizedBox(
+    return DashboardSegmentedTabs<MetricPeriod>(
+      tabs: tabs,
+      selectedValue: _period,
+      onSelected: (period) => setState(() => _period = period),
       height: 54,
-      child: Row(
-        children: tabs.map((tab) {
-          final selected = _period == tab.$1;
-          return Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-              child: TextButton(
-                style: TextButton.styleFrom(
-                  backgroundColor: selected
-                      ? _selectedSurface
-                      : Colors.transparent,
-                  foregroundColor: _cream,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                onPressed: () => setState(() => _period = tab.$1),
-                child: Text(tab.$2, style: TextStyle(fontSize: 16)),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
+      foreground: _cream,
+      selectedBackground: _selectedSurface,
+      tabMargin: EdgeInsets.zero,
+      tabPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
     );
   }
 
   Widget _historyTabs() {
-    const tabs = [
-      (HistoryRange.day, 'Day'),
-      (HistoryRange.week, 'Week'),
-      (HistoryRange.month, 'Month'),
-      (HistoryRange.calendar, '▦'),
-    ];
-    return SizedBox(
-      height: 46,
-      child: Row(
-        children: tabs.map((tab) {
-          final selected = _historyRange == tab.$1;
-          return Expanded(
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: () => setState(() => _historyRange = tab.$1),
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 5),
-                decoration: BoxDecoration(
-                  color: selected ? _selectedSurface : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  tab.$2,
-                  style: TextStyle(
-                    color: _cream,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
+    final tabs = [
+      DashboardSegmentTab.text(value: HistoryRange.day, label: 'Day'),
+      DashboardSegmentTab.text(value: HistoryRange.week, label: 'Week'),
+      DashboardSegmentTab.text(value: HistoryRange.month, label: 'Month'),
+      DashboardSegmentTab(
+        value: HistoryRange.calendar,
+        child: FaIcon(FontAwesomeIcons.calendar, size: 18),
       ),
+    ];
+    return DashboardSegmentedTabs<HistoryRange>(
+      tabs: tabs,
+      selectedValue: _historyRange,
+      onSelected: (range) => setState(() => _historyRange = range),
+      height: 46,
+      foreground: _cream,
+      selectedBackground: _selectedSurface,
     );
   }
 
@@ -2056,13 +2340,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final user = _user;
     if (user == null) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
-        child: Text(
-          'Sign in to compare workouts with friends.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: _muted, fontSize: 17),
-        ),
+      final members = _botLeaderboardMembers(aggregate);
+      return Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(26, 16, 26, 10),
+            child: Text(
+              'Active Bot and Chill Bot are included in the free app. Sign in from Settings to add real friends.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: _muted, fontSize: 17, height: 1.25),
+            ),
+          ),
+          ...members.indexed.map((entry) {
+            final index = entry.$1;
+            final member = entry.$2;
+            return _rankRow(
+              rank: index + 1,
+              icon: member.icon,
+              name: member.name,
+              value: member.calories,
+              subtitle: member.calories > 0
+                  ? '${member.minutes} min'
+                  : 'benchmark bot',
+            );
+          }),
+        ],
       );
     }
 
@@ -2118,6 +2420,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     rank: index + 1,
                     icon: member.icon,
                     name: member.name,
+                    photoUrl: member.photoUrl,
                     value: member.calories,
                     subtitle: member.calories > 0
                         ? '${member.minutes} min'
@@ -2164,6 +2467,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         calories: currentUserAggregate.calories,
         minutes: currentUserAggregate.minutes,
+        photoUrl:
+            (currentUserData['photoUrl'] as String?) ?? user.photoURL ?? '',
         isCurrentUser: true,
       ),
     ];
@@ -2186,17 +2491,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
           name: _displayNameForUserData(friendData, fallback: 'Friend'),
           calories: aggregate.calories,
           minutes: aggregate.minutes,
+          photoUrl: (friendData['photoUrl'] as String?) ?? '',
           isCurrentUser: false,
         ),
       );
     }
 
-    members.addAll([
+    members.addAll(_botLeaderboardMembers(currentUserAggregate));
+    _sortLeaderboardMembers(members);
+
+    return members;
+  }
+
+  List<_LeaderboardMember> _botLeaderboardMembers(
+    _MetricAggregate currentUserAggregate,
+  ) {
+    final members = [
       _LeaderboardMember(
         userId: 'active_bot',
         name: 'Active Bot',
         calories: _botValue(currentUserAggregate.calories, 1.25),
         minutes: math.max(35, (currentUserAggregate.minutes * 1.15).round()),
+        photoUrl: '',
         isBot: true,
       ),
       _LeaderboardMember(
@@ -2204,10 +2520,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
         name: 'Chill Bot',
         calories: _botValue(currentUserAggregate.calories, 0.82),
         minutes: math.max(20, (currentUserAggregate.minutes * 0.75).round()),
+        photoUrl: '',
         isBot: true,
       ),
-    ]);
+    ];
 
+    _sortLeaderboardMembers(members);
+    return members;
+  }
+
+  void _sortLeaderboardMembers(List<_LeaderboardMember> members) {
     members.sort((a, b) {
       final calorieCompare = b.calories.compareTo(a.calories);
       if (calorieCompare != 0) return calorieCompare;
@@ -2215,8 +2537,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (b.isCurrentUser) return 1;
       return a.name.compareTo(b.name);
     });
-
-    return members;
   }
 
   bool _isHiddenFriend({
@@ -2340,6 +2660,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required String name,
     required int value,
     required String subtitle,
+    String photoUrl = '',
     VoidCallback? onTap,
     VoidCallback? onRemove,
   }) {
@@ -2373,11 +2694,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
               ),
             ),
-            CircleAvatar(
-              radius: 23,
-              backgroundColor: _accent,
-              child: Icon(icon, color: _background, size: 26),
-            ),
+            _profileAvatar(photoUrl: photoUrl, icon: icon, radius: 23),
             SizedBox(width: 24),
             Expanded(
               child: Text(
@@ -2413,16 +2730,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Widget _profileAvatar({
+    required String photoUrl,
+    required IconData icon,
+    double radius = 23,
+  }) {
+    return DashboardProfileAvatar(
+      photoUrl: photoUrl,
+      icon: icon,
+      radius: radius,
+      background: _accent,
+      foreground: _background,
+    );
+  }
+
   Widget _groupsLeaderboard() {
     final user = _user;
     if (user == null) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
-        child: Text(
-          'Sign in to create and compete in groups.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: _muted, fontSize: 17),
-        ),
+      return Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(26, 16, 26, 10),
+            child: Text(
+              'Group creation is included in the free app. Sign in from Settings to create and compete in groups.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: _muted, fontSize: 17, height: 1.25),
+            ),
+          ),
+          _rankRow(
+            rank: 1,
+            icon: Icons.group_add_outlined,
+            name: 'Create a group',
+            value: 0,
+            subtitle: 'Free with Google sign-in',
+            onTap: _showCreateGroupSheet,
+          ),
+        ],
       );
     }
 
@@ -2491,7 +2834,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   icon: Icons.group_add_outlined,
                   name: 'Create a group',
                   value: 0,
-                  subtitle: 'Name it and invite friends',
+                  subtitle: 'Free plan: up to $_freeGroupLimit created groups',
                   onTap: _showCreateGroupSheet,
                 ),
               ],
@@ -2912,13 +3255,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _showGoalSheet() async {
     final user = _user;
-    if (user == null) return;
-
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .get();
-    var goal = _goalCalories(doc.data() ?? {});
+    final data = user == null
+        ? await _localSettingsData()
+        : (await FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(user.uid)
+                      .get())
+                  .data() ??
+              {};
+    var goal = _goalCalories(data);
 
     if (!mounted) return;
 
@@ -2932,13 +3277,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return StatefulBuilder(
           builder: (context, setSheetState) {
             Future<void> save() async {
-              await FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(user.uid)
-                  .set({
-                    'goalCalories': goal,
-                    'updatedAt': FieldValue.serverTimestamp(),
-                  }, SetOptions(merge: true));
+              await _updateUserSettings({'goalCalories': goal});
 
               if (!context.mounted) return;
               Navigator.of(context).pop();
@@ -3092,45 +3431,217 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final usernameController = TextEditingController(
       text: (data['username'] as String?) ?? '',
     );
+    var photoUrl = (data['photoUrl'] as String?) ?? user.photoURL ?? '';
+    File? selectedPhoto;
+    var saving = false;
 
     await _showSettingsSheet(
       title: 'Update Profile',
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextField(
-            controller: nameController,
-            style: TextStyle(color: _cream),
-            decoration: _inputDecoration('Display name'),
-          ),
-          SizedBox(height: 12),
-          TextField(
-            controller: usernameController,
-            style: TextStyle(color: _cream),
-            decoration: _inputDecoration('Username'),
-          ),
-          SizedBox(height: 16),
-          _primarySheetButton(
-            label: 'Save profile',
-            onPressed: () async {
-              final name = nameController.text.trim();
-              final username = usernameController.text.trim();
-              if (name.isEmpty || username.isEmpty) {
-                _showSnack('Name and username are required.');
-                return;
-              }
+      child: StatefulBuilder(
+        builder: (sheetContext, setSheetState) {
+          Future<void> pickPhoto(ImageSource source) async {
+            try {
+              final picked = await ImagePicker().pickImage(
+                source: source,
+                imageQuality: 88,
+                maxWidth: 900,
+              );
+              if (picked == null) return;
+              setSheetState(() {
+                selectedPhoto = File(picked.path);
+              });
+            } catch (e) {
+              _showSnack('Could not choose profile photo: $e');
+            }
+          }
 
-              await user.updateDisplayName(name);
-              await _updateUserSettings({'name': name, 'username': username});
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    CircleAvatar(
+                      radius: 46,
+                      backgroundColor: _accent,
+                      backgroundImage: selectedPhoto != null
+                          ? FileImage(selectedPhoto!)
+                          : photoUrl.trim().isNotEmpty
+                          ? NetworkImage(photoUrl.trim())
+                          : null,
+                      child: selectedPhoto == null && photoUrl.trim().isEmpty
+                          ? Icon(Icons.person, color: _background, size: 46)
+                          : null,
+                    ),
+                    Positioned(
+                      right: -6,
+                      bottom: -6,
+                      child: IconButton.filled(
+                        style: IconButton.styleFrom(
+                          backgroundColor: _accent,
+                          foregroundColor: _onAccent,
+                        ),
+                        onPressed: () => _showProfilePhotoSourceSheet(
+                          onCamera: () => pickPhoto(ImageSource.camera),
+                          onGallery: () => pickPhoto(ImageSource.gallery),
+                          onRemove:
+                              photoUrl.trim().isEmpty && selectedPhoto == null
+                              ? null
+                              : () {
+                                  setSheetState(() {
+                                    selectedPhoto = null;
+                                    photoUrl = '';
+                                  });
+                                },
+                        ),
+                        icon: const Icon(Icons.camera_alt_outlined),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 22),
+              TextField(
+                controller: nameController,
+                style: TextStyle(color: _cream),
+                decoration: _inputDecoration('Display name'),
+              ),
+              SizedBox(height: 12),
+              TextField(
+                controller: usernameController,
+                style: TextStyle(color: _cream),
+                decoration: _inputDecoration('Username'),
+              ),
+              SizedBox(height: 16),
+              _primarySheetButton(
+                label: saving ? 'Saving…' : 'Save profile',
+                onPressed: saving
+                    ? () {}
+                    : () async {
+                        final name = nameController.text.trim();
+                        final username = usernameController.text.trim();
+                        if (name.isEmpty || username.isEmpty) {
+                          _showSnack('Name and username are required.');
+                          return;
+                        }
 
-              if (!mounted) return;
-              Navigator.of(context).pop();
-            },
-          ),
-        ],
+                        setSheetState(() => saving = true);
+                        try {
+                          var nextPhotoUrl = photoUrl;
+                          if (selectedPhoto != null) {
+                            nextPhotoUrl = await _uploadProfilePhoto(
+                              selectedPhoto!,
+                            );
+                          }
+
+                          await user.updateDisplayName(name);
+                          await user.updatePhotoURL(
+                            nextPhotoUrl.trim().isEmpty ? null : nextPhotoUrl,
+                          );
+                          await _updateUserSettings({
+                            'name': name,
+                            'username': username,
+                            'photoUrl': nextPhotoUrl,
+                          });
+
+                          if (!mounted) return;
+                          Navigator.of(context).pop();
+                          _showSnack('Profile updated.');
+                        } catch (e) {
+                          _showSnack('Profile update failed: $e');
+                        } finally {
+                          if (mounted) {
+                            setSheetState(() => saving = false);
+                          }
+                        }
+                      },
+              ),
+            ],
+          );
+        },
       ),
     );
+  }
+
+  Future<void> _showProfilePhotoSourceSheet({
+    required VoidCallback onCamera,
+    required VoidCallback onGallery,
+    VoidCallback? onRemove,
+  }) {
+    return showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: _background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.camera_alt_outlined, color: _accent),
+                  title: Text('Take photo', style: TextStyle(color: _cream)),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    onCamera();
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.photo_library_outlined, color: _accent),
+                  title: Text(
+                    'Choose from camera roll',
+                    style: TextStyle(color: _cream),
+                  ),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    onGallery();
+                  },
+                ),
+                if (onRemove != null)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.delete_outline, color: _muted),
+                    title: Text(
+                      'Remove current photo',
+                      style: TextStyle(color: _cream),
+                    ),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      onRemove();
+                    },
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<String> _uploadProfilePhoto(File imageFile) async {
+    final user = _user;
+    if (user == null) {
+      throw StateError('Sign in to upload a profile photo.');
+    }
+
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final ref = FirebaseStorage.instance
+        .ref()
+        .child('profile_photos')
+        .child(user.uid)
+        .child('profile-$timestamp.jpg');
+    final task = await ref.putFile(
+      imageFile,
+      SettableMetadata(contentType: 'image/jpeg'),
+    );
+    return task.ref.getDownloadURL();
   }
 
   Future<void> _showRecapsSheet() async {
@@ -3178,7 +3689,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       side: BorderSide(color: _divider),
                     ),
                     onPressed: () {
-                      Share.share(
+                      _shareText(
+                        context,
                         'Burn Camp recap: ${NumberFormat.decimalPattern().format(month.calories)} calories and ${month.minutes} minutes trained this month.',
                       );
                     },
@@ -3195,7 +3707,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _inviteFriends() async {
-    await Share.share(
+    await _shareText(
+      context,
       'Join me on Burn Camp — track calories burned, training minutes, and compare workouts with friends.',
     );
   }
@@ -3695,6 +4208,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return;
     }
 
+    final existingGroupCount = await _currentUserCreatedGroupCount();
+    if (!mounted) return;
+    if (existingGroupCount >= _freeGroupLimit) {
+      _showSnack('Free accounts can create up to $_freeGroupLimit groups.');
+      _showSupportPage();
+      return;
+    }
+
     final groupNameController = TextEditingController();
     final usernameController = TextEditingController();
     final friendsFuture = _loadFriendOptions(user.uid);
@@ -3721,6 +4242,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
               setSheetState(() => saving = true);
               try {
+                final currentGroupCount = await _currentUserCreatedGroupCount();
+                if (currentGroupCount >= _freeGroupLimit) {
+                  _showSnack(
+                    'Free accounts can create up to $_freeGroupLimit groups.',
+                  );
+                  return;
+                }
+
                 final friends = await friendsFuture;
                 final friendNamesById = {
                   for (final friend in friends) friend.userId: friend.name,
@@ -3966,6 +4495,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Future<int> _currentUserCreatedGroupCount() async {
+    final user = _user;
+    if (user == null) return 0;
+
+    final db = FirebaseFirestore.instance;
+    final owned = await db
+        .collection('groups')
+        .where('ownerId', isEqualTo: user.uid)
+        .get();
+    final legacyCreated = await db
+        .collection('groups')
+        .where('createdBy', isEqualTo: user.uid)
+        .get();
+
+    return {
+      ...owned.docs.map((doc) => doc.id),
+      ...legacyCreated.docs.map((doc) => doc.id),
+    }.length;
+  }
+
   Future<List<_GroupInviteOption>> _loadFriendOptions(String userId) async {
     final userDoc = await FirebaseFirestore.instance
         .collection('users')
@@ -4194,7 +4743,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 _trackingModeOption(
                   title: 'Sync Apple Health',
                   subtitle: isIos
-                      ? 'Use Health app workouts when HealthKit sync is connected.'
+                      ? 'Import workout calories and minutes from HealthKit.'
                       : 'Available on iPhone only.',
                   icon: Icons.favorite,
                   selected: currentMode == 'appleHealth',
@@ -4328,43 +4877,90 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _showAppleHealthTrackingPage() {
     _pushDetailPage(
       title: 'Apple Health',
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(24, 36, 24, 28),
-        children: [
-          Icon(Icons.favorite, color: _accent, size: 54),
-          SizedBox(height: 18),
-          Text(
-            'Apple Health sync selected',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: _cream, fontSize: 24),
-          ),
-          SizedBox(height: 16),
-          Text(
-            'Burn Camp is set to use Apple Health as the workout source on iPhone. Native HealthKit permission and workout import still need to be connected before calories and minutes can sync automatically.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: _muted, fontSize: 18, height: 1.35),
-          ),
-          const SizedBox(height: 34),
-          _infoBlock(
-            'What will sync',
-            'Calories burned and workout duration from Health app workouts.',
-          ),
-          _infoBlock(
-            'Manual backup',
-            'You can still add a workout manually if Health sync is unavailable.',
-          ),
-          _infoBlock(
-            'Next native step',
-            'Add HealthKit capability, request workout/active energy permissions, then import Health samples into the workouts collection.',
-          ),
-          SizedBox(height: 28),
-          _primarySheetButton(
-            label: 'Add manual workout',
-            onPressed: _showAddWorkoutSheet,
-          ),
-        ],
+      child: StatefulBuilder(
+        builder: (context, setPageState) {
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(24, 36, 24, 28),
+            children: [
+              Icon(Icons.favorite, color: _accent, size: 54),
+              SizedBox(height: 18),
+              Text(
+                'Apple Health sync',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: _cream, fontSize: 24),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Burn Camp can read Health app workouts on iPhone and import active calories plus workout duration into your daily totals.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: _muted, fontSize: 18, height: 1.35),
+              ),
+              const SizedBox(height: 34),
+              _infoBlock(
+                'What syncs',
+                'Workout duration and active energy burned from Apple Health workouts.',
+              ),
+              _infoBlock(
+                'Duplicate safe',
+                'HealthKit workout IDs are stored so repeated syncs do not double-count the same workout.',
+              ),
+              _infoBlock(
+                'Manual backup',
+                'You can still add a workout manually if Health sync is unavailable.',
+              ),
+              SizedBox(height: 28),
+              _primarySheetButton(
+                label: _syncingAppleHealth
+                    ? 'Syncing Apple Health...'
+                    : 'Connect and sync last 7 days',
+                onPressed: _syncingAppleHealth
+                    ? () {}
+                    : () => _syncAppleHealthWorkouts(setPageState),
+              ),
+              SizedBox(height: 12),
+              OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _cream,
+                  side: BorderSide(color: _divider),
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                ),
+                onPressed: _showAddWorkoutSheet,
+                child: Text('Add manual workout'),
+              ),
+            ],
+          );
+        },
       ),
     );
+  }
+
+  Future<void> _syncAppleHealthWorkouts(StateSetter setPageState) async {
+    final service = AppleHealthService();
+    if (!service.isAvailableOnDevice) {
+      _showSnack('Apple Health sync is available on iPhone only.');
+      return;
+    }
+
+    setPageState(() => _syncingAppleHealth = true);
+    setState(() => _syncingAppleHealth = true);
+
+    try {
+      final result = await service.importRecentWorkouts();
+      if (!mounted) return;
+      _showSnack(
+        result.importedWorkouts == 0
+            ? 'No new Apple Health workouts found.'
+            : 'Imported ${result.importedWorkouts} workouts: ${result.calories} cals · ${result.minutes} min.',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _showSnack('Apple Health sync failed: $e');
+    } finally {
+      if (mounted) {
+        setPageState(() => _syncingAppleHealth = false);
+        setState(() => _syncingAppleHealth = false);
+      }
+    }
   }
 
   void _showManageGroupsPage() {
@@ -4440,7 +5036,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             title: 'Send feedback',
             subtitle: 'Share what should be improved next.',
             icon: Icons.feedback_outlined,
-            onTap: () => Share.share('Burn Camp feedback: '),
+            onTap: () => _shareText(context, 'Burn Camp feedback: '),
           ),
           SizedBox(height: 18),
           Text(
@@ -4685,12 +5281,84 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _updateUserSettings(Map<String, dynamic> values) async {
     final user = _user;
-    if (user == null) return;
+    if (user == null) {
+      final prefs = await SharedPreferences.getInstance();
+      for (final entry in values.entries) {
+        final key = 'settings.${entry.key}';
+        final value = entry.value;
+        if (value is String) {
+          await prefs.setString(key, value);
+        } else if (value is int) {
+          await prefs.setInt(key, value);
+        } else if (value is bool) {
+          await prefs.setBool(key, value);
+        } else if (value is List<String>) {
+          await prefs.setStringList(key, value);
+        }
+      }
+      if (mounted) setState(() => _settingsRefresh++);
+      return;
+    }
 
     await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
       ...values,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
+  }
+
+  Future<Map<String, dynamic>> _localSettingsData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final onboarding = await OnboardingPreferences.load();
+    return {
+      'goalCalories':
+          prefs.getInt('settings.goalCalories') ??
+          (onboarding['goalCalories'] as int?) ??
+          500,
+      'defaultWorkoutMinutes':
+          prefs.getInt('settings.defaultWorkoutMinutes') ?? 30,
+      'workoutTrackingMode':
+          prefs.getString('settings.workoutTrackingMode') ??
+          onboarding['workoutTrackingMode'] as String? ??
+          'manual',
+      'streakMode': prefs.getString('settings.streakMode') ?? 'strict',
+      'themeMode': prefs.getString('settings.themeMode') ?? 'dark',
+      'notificationsEnabled':
+          prefs.getBool('settings.notificationsEnabled') ?? true,
+      'hiddenFriends': prefs.getStringList('settings.hiddenFriends') ?? [],
+    };
+  }
+
+  Future<void> _signInFromSettings() async {
+    try {
+      await AuthService().signInWithGoogle();
+      await OnboardingPreferences.syncToCurrentUser();
+      await _syncLocalSettingsToCurrentUser();
+      if (!mounted) return;
+      setState(() {});
+      _showSnack('Signed in. Your Burn Camp settings can now sync.');
+    } catch (e) {
+      _showSnack('Sign in failed: $e');
+    }
+  }
+
+  Future<void> _syncLocalSettingsToCurrentUser() async {
+    final user = _user;
+    if (user == null) return;
+
+    final settings = await _localSettingsData();
+    await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+      ...settings,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> _resetPersonalization() async {
+    await OnboardingPreferences.reset();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+      (_) => false,
+    );
   }
 
   String _streakModeLabel(String mode) {
@@ -4710,6 +5378,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _openStatsShareScreen(List<Map<String, dynamic>> summaries) {
+    final data = _StatsShareData(
+      periodAggregates: {
+        for (final period in MetricPeriod.values)
+          period: _aggregateForPeriod(summaries, period),
+      },
+      longestStreak: _longestStreak(summaries),
+      bestWeek: _bestWindow(summaries, const Duration(days: 7)),
+      bestMonth: _bestMonth(summaries),
+    );
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) =>
+            _StatsShareScreen(initialPeriod: _period, shareData: data),
+      ),
+    );
+  }
+
+  Future<void> _shareText(BuildContext _, String text) async {
+    try {
+      final origin = _shareOriginForPlatform();
+      await SharePlus.instance.share(
+        ShareParams(text: text, sharePositionOrigin: origin),
+      );
+    } catch (e) {
+      _showSnack('Share failed: $e');
+    }
+  }
+
+  Rect? _shareOriginForPlatform() {
+    if (defaultTargetPlatform != TargetPlatform.iOS) {
+      return null;
+    }
+
+    // The app-level scaling wrapper can report Flutter global coordinates that
+    // are outside the native iOS source view. iOS rejects those rects. Passing a
+    // tiny in-bounds rect is more reliable for the text-only share sheet.
+    return const Rect.fromLTWH(1, 1, 1, 1);
   }
 
   Widget _darkNumberField({
@@ -5018,9 +5727,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _logout() async {
-    await FirebaseAuth.instance.signOut();
+    try {
+      final googleSignIn = GoogleSignIn();
+      if (await googleSignIn.isSignedIn()) {
+        await googleSignIn.disconnect();
+        await googleSignIn.signOut();
+      }
+      await FirebaseAuth.instance.signOut();
+    } catch (e) {
+      _showSnack('Sign out failed: $e');
+      return;
+    }
+
     if (!mounted) return;
-    Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+    setState(() {});
+    _showSnack('Signed out of Google.');
   }
 }
 
@@ -5034,6 +5755,784 @@ class _MetricAggregate {
     required this.minutes,
     required this.days,
   });
+}
+
+class _StatsShareData {
+  final Map<MetricPeriod, _MetricAggregate> periodAggregates;
+  final int longestStreak;
+  final String bestWeek;
+  final String bestMonth;
+
+  const _StatsShareData({
+    required this.periodAggregates,
+    required this.longestStreak,
+    required this.bestWeek,
+    required this.bestMonth,
+  });
+
+  _MetricAggregate aggregateFor(MetricPeriod period) {
+    return periodAggregates[period] ??
+        const _MetricAggregate(calories: 0, minutes: 0, days: 0);
+  }
+}
+
+class _StatsShareScreen extends StatefulWidget {
+  final MetricPeriod initialPeriod;
+  final _StatsShareData shareData;
+
+  const _StatsShareScreen({
+    required this.initialPeriod,
+    required this.shareData,
+  });
+
+  @override
+  State<_StatsShareScreen> createState() => _StatsShareScreenState();
+}
+
+class _StatsShareScreenState extends State<_StatsShareScreen> {
+  final GlobalKey _previewKey = GlobalKey();
+  final ImagePicker _imagePicker = ImagePicker();
+  late MetricPeriod _period = widget.initialPeriod;
+  var _backgroundIndex = 0;
+  var _largeType = true;
+  var _squareFormat = false;
+  var _saving = false;
+  var _renderingExport = false;
+  File? _customBackground;
+  var _transparentBackground = false;
+
+  static const _backgrounds = [
+    _ShareBackground(
+      name: 'Gradient',
+      start: Color(0xFF17110E),
+      end: Color(0xFFB85C38),
+      textColor: ClaudePalette.cream,
+    ),
+    _ShareBackground(
+      name: 'Light',
+      start: Color(0xFFFFF2E3),
+      end: Color(0xFFFFB28C),
+      textColor: ClaudePalette.charcoal,
+    ),
+    _ShareBackground(
+      name: 'Night',
+      start: Color(0xFF090909),
+      end: Color(0xFF202124),
+      textColor: ClaudePalette.cream,
+      checker: true,
+    ),
+  ];
+
+  _MetricAggregate get _aggregate => widget.shareData.aggregateFor(_period);
+  _ShareBackground get _background => _backgrounds[_backgroundIndex];
+  Color get _textColor {
+    if (_transparentBackground || _customBackground != null) {
+      return ClaudePalette.cream;
+    }
+    return _background.textColor;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0C0C0C),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+              child: Row(
+                children: [
+                  _roundButton(
+                    icon: Icons.close,
+                    onPressed: () => Navigator.of(context).pop(),
+                    tooltip: 'Close',
+                  ),
+                  const Spacer(),
+                  _roundTextButton(
+                    label: _periodBadge,
+                    onPressed: _cyclePeriod,
+                    tooltip: 'Change stats range',
+                  ),
+                  const SizedBox(width: 12),
+                  _roundTextButton(
+                    label: 'A',
+                    onPressed: () => setState(() => _largeType = !_largeType),
+                    tooltip: 'Toggle text size',
+                  ),
+                  const SizedBox(width: 12),
+                  _roundButton(
+                    icon: _squareFormat
+                        ? Icons.phone_iphone
+                        : Icons.crop_square,
+                    onPressed: () =>
+                        setState(() => _squareFormat = !_squareFormat),
+                    tooltip: _squareFormat
+                        ? 'Use full-screen size'
+                        : 'Use 1:1 size',
+                  ),
+                  const SizedBox(width: 12),
+                  _roundButton(
+                    icon: Icons.photo_library_outlined,
+                    onPressed: _showBackgroundMenu,
+                    tooltip: 'Choose background',
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                  child: AspectRatio(
+                    aspectRatio: _squareFormat ? 1 : 9 / 16,
+                    child: RepaintBoundary(
+                      key: _previewKey,
+                      child: _statsPreview(),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(26, 8, 26, 24),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _socialButton(
+                    label: 'Instagram',
+                    child: const _InstagramGlyph(),
+                    onPressed: () => _comingSoon('Instagram'),
+                  ),
+                  _socialButton(
+                    label: 'Snap',
+                    child: const _SnapGlyph(),
+                    onPressed: () => _comingSoon('Snapchat'),
+                  ),
+                  _socialButton(
+                    label: 'Facebook',
+                    child: const _FacebookGlyph(),
+                    onPressed: () => _comingSoon('Facebook'),
+                  ),
+                  _socialButton(
+                    label: 'Save',
+                    child: const Icon(
+                      Icons.file_download_outlined,
+                      color: Colors.white,
+                      size: 34,
+                    ),
+                    onPressed: _saving ? null : _savePreview,
+                  ),
+                  _socialButton(
+                    label: 'Share',
+                    child: const Icon(
+                      Icons.ios_share,
+                      color: Colors.white,
+                      size: 34,
+                    ),
+                    onPressed: _saving ? null : _sharePreview,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _statsPreview() {
+    final textColor = _textColor;
+    final calories = NumberFormat.decimalPattern().format(_aggregate.calories);
+    final minutes = NumberFormat.decimalPattern().format(_aggregate.minutes);
+    final titleSize = _largeType
+        ? (_squareFormat ? 66.0 : 84.0)
+        : (_squareFormat ? 52.0 : 66.0);
+    final subtitleSize = _largeType ? 25.0 : 21.0;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(_squareFormat ? 28 : 34),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (!_transparentBackground && _customBackground == null)
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [_background.start, _background.end],
+                ),
+              ),
+            ),
+          if (!_transparentBackground && _customBackground != null)
+            Image.file(_customBackground!, fit: BoxFit.cover),
+          if (_transparentBackground && !_renderingExport)
+            const CustomPaint(painter: _CheckerPainter()),
+          if (!_transparentBackground)
+            Container(color: Colors.black.withValues(alpha: 0.18)),
+          Padding(
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              children: [
+                Align(
+                  alignment: Alignment.topRight,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.22),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.16),
+                      ),
+                    ),
+                    child: Text(
+                      _periodLabel,
+                      style: TextStyle(
+                        color: textColor,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  'calories burned',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: textColor.withValues(alpha: 0.88),
+                    fontSize: subtitleSize,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    calories,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: titleSize,
+                      fontWeight: FontWeight.w300,
+                      height: 0.95,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 12,
+                  runSpacing: 8,
+                  children: [
+                    _previewMetric('$minutes min'),
+                    _previewMetric(
+                      '${widget.shareData.longestStreak} day streak',
+                    ),
+                    _previewMetric('${_aggregate.days} active days'),
+                  ],
+                ),
+                const Spacer(),
+                if (!_squareFormat)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.20),
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.12),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        _miniStat('Best week', widget.shareData.bestWeek),
+                        const SizedBox(height: 8),
+                        _miniStat('Best month', widget.shareData.bestMonth),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 28),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.local_fire_department,
+                      color: textColor,
+                      size: 26,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Burn Camp',
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 27,
+                        fontWeight: FontWeight.w900,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _previewMetric(String value) {
+    return Text(
+      value,
+      style: TextStyle(
+        color: _textColor.withValues(alpha: 0.88),
+        fontSize: 21,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+  }
+
+  Widget _miniStat(String label, String value) {
+    return Row(
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: _textColor.withValues(alpha: 0.72),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: _textColor, fontWeight: FontWeight.w800),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _roundButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+    required String tooltip,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.black,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onPressed,
+          child: SizedBox(
+            width: 58,
+            height: 58,
+            child: Icon(icon, color: Colors.white, size: 30),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _roundTextButton({
+    required String label,
+    required VoidCallback onPressed,
+    required String tooltip,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.black,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onPressed,
+          child: SizedBox(
+            width: 58,
+            height: 58,
+            child: Center(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 19,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _socialButton({
+    required String label,
+    required Widget child,
+    required VoidCallback? onPressed,
+  }) {
+    return Tooltip(
+      message: label,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onPressed,
+        child: Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            color: Colors.black,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+          ),
+          child: Center(child: child),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _sharePreview() async {
+    try {
+      final file = await _writePreviewPng(toDocuments: false);
+      await SharePlus.instance.share(
+        ShareParams(
+          text: _shareText,
+          files: [XFile(file.path, mimeType: 'image/png')],
+          fileNameOverrides: ['burn-camp-stats.png'],
+          sharePositionOrigin: _shareOriginForPlatform(),
+        ),
+      );
+    } catch (e) {
+      _showSnack('Share failed: $e');
+    }
+  }
+
+  Future<void> _savePreview() async {
+    setState(() => _saving = true);
+    try {
+      final file = await _writePreviewPng(toDocuments: true);
+      _showSnack('Saved stats image to ${file.path}');
+    } catch (e) {
+      _showSnack('Save failed: $e');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<File> _writePreviewPng({required bool toDocuments}) async {
+    if (_transparentBackground && !_renderingExport) {
+      setState(() => _renderingExport = true);
+    }
+    await WidgetsBinding.instance.endOfFrame;
+    try {
+      final boundary =
+          _previewKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
+      if (boundary == null) {
+        throw StateError('Stats preview is not ready yet.');
+      }
+
+      final image = await boundary.toImage(pixelRatio: 3);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      final bytes = byteData?.buffer.asUint8List();
+      if (bytes == null) {
+        throw StateError('Could not render stats image.');
+      }
+
+      final directory = toDocuments
+          ? await getApplicationDocumentsDirectory()
+          : await getTemporaryDirectory();
+      final timestamp = DateFormat('yyyyMMdd-HHmmss').format(DateTime.now());
+      final file = File('${directory.path}/burn-camp-stats-$timestamp.png');
+      return await file.writeAsBytes(bytes, flush: true);
+    } finally {
+      if (_renderingExport && mounted) {
+        setState(() => _renderingExport = false);
+      }
+    }
+  }
+
+  void _cyclePeriod() {
+    final values = MetricPeriod.values;
+    final nextIndex = (values.indexOf(_period) + 1) % values.length;
+    setState(() => _period = values[nextIndex]);
+  }
+
+  Future<void> _showBackgroundMenu() {
+    return showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xEE161616),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.35),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                _backgroundOption(
+                  icon: Icons.camera_alt_outlined,
+                  title: 'Camera',
+                  onTap: () => _pickBackground(ImageSource.camera),
+                ),
+                _backgroundOption(
+                  icon: Icons.photo_library_outlined,
+                  title: 'Camera roll',
+                  onTap: () => _pickBackground(ImageSource.gallery),
+                ),
+                _backgroundOption(
+                  icon: Icons.texture_outlined,
+                  title: 'Transparent',
+                  onTap: _useTransparentBackground,
+                ),
+                _backgroundOption(
+                  icon: Icons.gradient_outlined,
+                  title: 'App background',
+                  onTap: _cycleBackgroundFromSheet,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _backgroundOption({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(icon, color: Colors.white, size: 28),
+      title: Text(
+        title,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 22,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      onTap: () {
+        Navigator.of(context).pop();
+        onTap();
+      },
+    );
+  }
+
+  Future<void> _pickBackground(ImageSource source) async {
+    try {
+      final image = await _imagePicker.pickImage(
+        source: source,
+        imageQuality: 92,
+      );
+      if (image == null) return;
+      setState(() {
+        _customBackground = File(image.path);
+        _transparentBackground = false;
+      });
+    } catch (e) {
+      _showSnack('Could not pick image: $e');
+    }
+  }
+
+  void _useTransparentBackground() {
+    setState(() {
+      _customBackground = null;
+      _transparentBackground = true;
+    });
+  }
+
+  void _cycleBackgroundFromSheet() {
+    _cycleBackground();
+    _showSnack('Using ${_background.name} background.');
+  }
+
+  void _cycleBackground() {
+    setState(() {
+      _backgroundIndex = (_backgroundIndex + 1) % _backgrounds.length;
+      _customBackground = null;
+      _transparentBackground = false;
+    });
+  }
+
+  void _comingSoon(String appName) {
+    _showSnack('$appName sharing is coming soon. Use Share or Save for now.');
+  }
+
+  void _showSnack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Rect? _shareOriginForPlatform() {
+    if (defaultTargetPlatform != TargetPlatform.iOS) return null;
+    return const Rect.fromLTWH(1, 1, 1, 1);
+  }
+
+  String get _shareText {
+    final calories = NumberFormat.decimalPattern().format(_aggregate.calories);
+    final minutes = NumberFormat.decimalPattern().format(_aggregate.minutes);
+    return 'Burn Camp ${_periodLabel.toLowerCase()}: $calories calories burned and $minutes minutes trained.';
+  }
+
+  String get _periodLabel {
+    switch (_period) {
+      case MetricPeriod.today:
+        return 'Today';
+      case MetricPeriod.yesterday:
+        return 'Yesterday';
+      case MetricPeriod.week:
+        return 'This week';
+      case MetricPeriod.month:
+        return 'This month';
+    }
+  }
+
+  String get _periodBadge {
+    switch (_period) {
+      case MetricPeriod.today:
+        return '1D';
+      case MetricPeriod.yesterday:
+        return 'Y';
+      case MetricPeriod.week:
+        return '7D';
+      case MetricPeriod.month:
+        return '30';
+    }
+  }
+}
+
+class _ShareBackground {
+  final String name;
+  final Color start;
+  final Color end;
+  final Color textColor;
+  final bool checker;
+
+  const _ShareBackground({
+    required this.name,
+    required this.start,
+    required this.end,
+    required this.textColor,
+    this.checker = false,
+  });
+}
+
+class _CheckerPainter extends CustomPainter {
+  const _CheckerPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const square = 34.0;
+    final dark = Paint()..color = const Color(0xFF242424);
+    final light = Paint()..color = const Color(0xFF3B3B3B);
+
+    for (var y = 0.0; y < size.height; y += square) {
+      for (var x = 0.0; x < size.width; x += square) {
+        final useLight = ((x / square).floor() + (y / square).floor()).isEven;
+        canvas.drawRect(
+          Rect.fromLTWH(x, y, square, square),
+          useLight ? light : dark,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _InstagramGlyph extends StatelessWidget {
+  const _InstagramGlyph();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 38,
+      height: 38,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(11),
+        gradient: const LinearGradient(
+          begin: Alignment.bottomLeft,
+          end: Alignment.topRight,
+          colors: [
+            Color(0xFFFFD600),
+            Color(0xFFFF7A00),
+            Color(0xFFFF0069),
+            Color(0xFFD300C5),
+            Color(0xFF7638FA),
+          ],
+        ),
+      ),
+      child: const Icon(Icons.camera_alt, color: Colors.white, size: 24),
+    );
+  }
+}
+
+class _SnapGlyph extends StatelessWidget {
+  const _SnapGlyph();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 38,
+      height: 38,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFC00),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: const Center(child: Text('👻', style: TextStyle(fontSize: 22))),
+    );
+  }
+}
+
+class _FacebookGlyph extends StatelessWidget {
+  const _FacebookGlyph();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 38,
+      height: 38,
+      decoration: const BoxDecoration(
+        color: Color(0xFF1877F2),
+        shape: BoxShape.circle,
+      ),
+      child: const Center(
+        child: Text(
+          'f',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 32,
+            fontWeight: FontWeight.w900,
+            height: 1,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _GroupTotals {
@@ -5062,6 +6561,7 @@ class _LeaderboardMember {
   final String name;
   final int calories;
   final int minutes;
+  final String photoUrl;
   final bool isCurrentUser;
   final bool isBot;
 
@@ -5070,6 +6570,7 @@ class _LeaderboardMember {
     required this.name,
     required this.calories,
     required this.minutes,
+    this.photoUrl = '',
     this.isCurrentUser = false,
     this.isBot = false,
   });
