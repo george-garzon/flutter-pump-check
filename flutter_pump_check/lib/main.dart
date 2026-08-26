@@ -1,23 +1,33 @@
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_pump_check/features/login_feature/screens/splash_screen.dart';
 import 'package:flutter_pump_check/widgets/ad_supported_app_shell.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+
 import 'features/dashboard_feature/screens/dashboard_screen.dart';
-import 'screens/onboarding_screen.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'theme/app_scale.dart';
 import 'theme/app_gradient_background.dart';
 import 'theme/app_scroll_behavior.dart';
 import 'theme/app_theme_mode.dart';
 import 'theme/theme.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'screens/onboarding_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  // await MobileAds.instance.initialize();
+  if (_supportsMobileAds) {
+    await MobileAds.instance.initialize();
+  }
   runApp(const ProviderScope(child: WorkoutBuddyApp()));
+}
+
+bool get _supportsMobileAds {
+  if (kIsWeb) return false;
+  return defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.iOS;
 }
 
 class WorkoutBuddyApp extends StatelessWidget {
