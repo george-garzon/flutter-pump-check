@@ -45,6 +45,12 @@ class AppleHealthService {
         true;
   }
 
+  Future<void> revokePermissions() async {
+    if (!isAvailableOnDevice) return;
+
+    await _health.revokePermissions();
+  }
+
   Future<AppleHealthImportResult> importRecentWorkouts({
     Duration lookback = const Duration(days: 7),
   }) async {

@@ -21,6 +21,7 @@ import 'package:flutter_pump_check/features/dashboard_feature/widgets/dashboard_
 import 'package:flutter_pump_check/features/dashboard_feature/widgets/dashboard_settings_row.dart';
 import 'package:flutter_pump_check/features/dashboard_feature/widgets/dashboard_web_drawer.dart';
 import 'package:flutter_pump_check/features/dashboard_feature/widgets/dashboard_weekday_label.dart';
+import 'package:flutter_pump_check/theme/app_gradient_background.dart';
 import 'package:flutter_pump_check/theme/app_theme_mode.dart';
 import 'package:flutter_pump_check/theme/claude_palette.dart';
 import 'package:flutter_pump_check/utils/messages.dart' as preset_messages;
@@ -64,6 +65,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   static const _accent = ClaudePalette.accent;
   static const _goalLime = ClaudePalette.goal;
   static const _freeGroupLimit = 5;
+  static bool _appleHealthPermissionPromptShownThisSession = false;
 
   bool get _isLight => Theme.of(context).brightness == Brightness.light;
   Color get _background =>
@@ -87,6 +89,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   int _settingsRefresh = 0;
   bool _syncingAppleHealth = false;
   bool _checkedAppleHealthOnLaunch = false;
+  bool _showingAppleHealthPermissionDialog = false;
   late final TabController _tabController;
   final TextEditingController _friendUsernameController =
       TextEditingController();
@@ -231,47 +234,59 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     final hasPermissions = await service.hasRequiredPermissions();
     if (hasPermissions || !mounted) return;
+    if (_appleHealthPermissionPromptShownThisSession ||
+        _showingAppleHealthPermissionDialog) {
+      return;
+    }
 
+    _appleHealthPermissionPromptShownThisSession = true;
     await _showAppleHealthRequiredDialog(service);
   }
 
   Future<void> _showAppleHealthRequiredDialog(
     AppleHealthService service,
   ) async {
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: _surface,
-          title: Text(
-            'Apple Health access required',
-            style: TextStyle(color: _cream),
-          ),
-          content: Text(
-            'Burn Camp needs Apple Health access to import workout calories and minutes. Enable Health access to keep tracking data.',
-            style: TextStyle(color: _muted),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text('Not now', style: TextStyle(color: _muted)),
+    if (_showingAppleHealthPermissionDialog) return;
+
+    _showingAppleHealthPermissionDialog = true;
+    try {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          return AlertDialog(
+            backgroundColor: _surface,
+            title: Text(
+              'Apple Health access required',
+              style: TextStyle(color: _cream),
             ),
-            TextButton(
-              onPressed: () async {
-                final granted = await service.requestAuthorization();
-                if (!dialogContext.mounted) return;
-                Navigator.of(dialogContext).pop();
-                if (!granted && mounted) {
-                  _showSnack('Apple Health access is still disabled.');
-                }
-              },
-              child: Text('Enable', style: TextStyle(color: _accent)),
+            content: Text(
+              'Burn Camp needs Apple Health access to import workout calories and minutes. Enable Health access to keep tracking data.',
+              style: TextStyle(color: _muted),
             ),
-          ],
-        );
-      },
-    );
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: Text('Not now', style: TextStyle(color: _muted)),
+              ),
+              TextButton(
+                onPressed: () async {
+                  final granted = await service.requestAuthorization();
+                  if (!dialogContext.mounted) return;
+                  Navigator.of(dialogContext).pop();
+                  if (!granted && mounted) {
+                    _showSnack('Apple Health access is still disabled.');
+                  }
+                },
+                child: Text('Enable', style: TextStyle(color: _accent)),
+              ),
+            ],
+          );
+        },
+      );
+    } finally {
+      _showingAppleHealthPermissionDialog = false;
+    }
   }
 
   Widget _homeTab() {
@@ -2347,84 +2362,269 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   void _showAppleHealthTrackingPage() {
-    _pushDetailPage(
-      title: 'Apple Health',
-      child: StatefulBuilder(
-        builder: (context, setPageState) {
-          return ListView(
-            padding: EdgeInsets.fromLTRB(
-              context.dimensions.values.s24,
-              context.dimensions.values.s36,
-              context.dimensions.values.s24,
-              context.dimensions.values.s28,
-            ),
-            children: [
-              Icon(
-                Icons.favorite,
-                color: _accent,
-                size: context.dimensions.values.s54,
+    final service = AppleHealthService();
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AppGradientBackground(
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              foregroundColor: _cream,
+              centerTitle: true,
+              leading: IconButton(
+                icon: Icon(
+                  Icons.chevron_left,
+                  color: _cream,
+                  size: context.dimensions.values.s34,
+                ),
+                onPressed: () => Navigator.of(context).pop(),
               ),
-              SizedBox(height: context.dimensions.values.s18),
-              Text(
-                'Apple Health sync',
-                textAlign: TextAlign.center,
+              title: Text(
+                'Sync with Apple Health',
                 style: TextStyle(
                   color: _cream,
-                  fontSize: context.textSizes.s24,
+                  fontSize: context.textSizes.s22,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-              SizedBox(height: context.dimensions.values.s16),
-              Text(
-                'Burn Camp can read Health app workouts on iPhone and import active calories plus workout duration into your daily totals.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: _muted,
-                  fontSize: context.textSizes.s18,
-                  height: 1.35,
-                ),
-              ),
-              SizedBox(height: context.dimensions.values.s34),
-              _infoBlock(
-                'What syncs',
-                'Workout duration and active energy burned from Apple Health workouts.',
-              ),
-              _infoBlock(
-                'Duplicate safe',
-                'HealthKit workout IDs are stored so repeated syncs do not double-count the same workout.',
-              ),
-              if (kDebugMode)
-                _infoBlock(
-                  'Manual backup',
-                  'Development builds can still add workouts manually for testing.',
-                ),
-              SizedBox(height: context.dimensions.values.s28),
-              _primarySheetButton(
-                label: _syncingAppleHealth
-                    ? 'Syncing Apple Health...'
-                    : 'Connect and sync last 7 days',
-                onPressed: _syncingAppleHealth
-                    ? () {}
-                    : () => _syncAppleHealthWorkouts(setPageState),
-              ),
-              if (kDebugMode) ...[
-                SizedBox(height: context.dimensions.values.s12),
-                OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: _cream,
-                    side: BorderSide(color: _divider),
-                    padding: EdgeInsets.symmetric(
-                      vertical: context.dimensions.values.s13,
-                    ),
-                  ),
-                  onPressed: _showAddWorkoutSheet,
-                  child: Text('Add manual workout'),
-                ),
-              ],
-            ],
-          );
-        },
+            ),
+            body: FutureBuilder<bool>(
+              future: service.hasRequiredPermissions(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                return StatefulBuilder(
+                  builder: (context, setPageState) {
+                    return snapshot.data == true
+                        ? _appleHealthConnectedContent(service, setPageState)
+                        : _appleHealthConnectContent(setPageState);
+                  },
+                );
+              },
+            ),
+          ),
+        ),
       ),
     );
+  }
+
+  Widget _appleHealthConnectedContent(
+    AppleHealthService service,
+    StateSetter setPageState,
+  ) {
+    return StreamBuilder<Map<String, dynamic>?>(
+      stream: WorkoutService.watchDay(),
+      builder: (context, snapshot) {
+        final summary = snapshot.data;
+        final calories = WorkoutService.caloriesFromSummary(summary);
+        final minutes = WorkoutService.minutesFromSummary(summary);
+
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              context.dimensions.values.s24,
+              context.dimensions.values.s34,
+              context.dimensions.values.s24,
+              _contentBottomPadding(context, 28),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.check_circle,
+                      color: _goalLime,
+                      size: context.dimensions.values.s28,
+                    ),
+                    SizedBox(width: context.dimensions.values.s8),
+                    Flexible(
+                      child: Text(
+                        'Connected to Apple Health',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: _cream,
+                          fontSize: context.textSizes.s24,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: context.dimensions.values.s12),
+                Text(
+                  'Burn Camp imports workout calories and duration from Apple Health to keep your daily totals updated.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: _cream,
+                    fontSize: context.textSizes.s20,
+                    height: 1.35,
+                  ),
+                ),
+                SizedBox(height: context.dimensions.values.s42),
+                Text(
+                  'Today from Apple Health -',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: _cream,
+                    fontSize: context.textSizes.s20,
+                    height: 1.35,
+                  ),
+                ),
+                SizedBox(height: context.dimensions.values.s8),
+                Text(
+                  'Calories imported: ${NumberFormat.decimalPattern().format(calories)}',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: _cream,
+                    fontSize: context.textSizes.s20,
+                    height: 1.35,
+                  ),
+                ),
+                Text(
+                  'Workout minutes: ${NumberFormat.decimalPattern().format(minutes)}',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: _cream,
+                    fontSize: context.textSizes.s20,
+                    height: 1.35,
+                  ),
+                ),
+                SizedBox(height: context.dimensions.values.s42),
+                Text(
+                  'Tips:',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: _muted,
+                    fontSize: context.textSizes.s18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                SizedBox(height: context.dimensions.values.s10),
+                Text(
+                  '• Keep Workouts and Active Energy enabled in Apple Health\n'
+                  '• Open Burn Camp after workouts to sync recent data',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: _muted,
+                    fontSize: context.textSizes.s17,
+                    height: 1.45,
+                  ),
+                ),
+                const Spacer(),
+                SizedBox(
+                  width: double.infinity,
+                  height: context.dimensions.values.s56,
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _accent,
+                      side: BorderSide(color: _accent),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          context.dimensions.values.s14,
+                        ),
+                      ),
+                    ),
+                    onPressed: () =>
+                        _disconnectAppleHealth(service, setPageState),
+                    child: Text(
+                      'Disconnect Apple Health',
+                      style: TextStyle(fontSize: context.textSizes.s20),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _appleHealthConnectContent(StateSetter setPageState) {
+    return ListView(
+      padding: EdgeInsets.fromLTRB(
+        context.dimensions.values.s24,
+        context.dimensions.values.s36,
+        context.dimensions.values.s24,
+        _contentBottomPadding(context, 28),
+      ),
+      children: [
+        Icon(
+          Icons.favorite,
+          color: _accent,
+          size: context.dimensions.values.s54,
+        ),
+        SizedBox(height: context.dimensions.values.s18),
+        Text(
+          'Apple Health sync',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: _cream, fontSize: context.textSizes.s24),
+        ),
+        SizedBox(height: context.dimensions.values.s16),
+        Text(
+          'Burn Camp can read Health app workouts on iPhone and import active calories plus workout duration into your daily totals.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: _muted,
+            fontSize: context.textSizes.s18,
+            height: 1.35,
+          ),
+        ),
+        SizedBox(height: context.dimensions.values.s34),
+        _infoBlock(
+          'What syncs',
+          'Workout duration and active energy burned from Apple Health workouts.',
+        ),
+        _infoBlock(
+          'Duplicate safe',
+          'HealthKit workout IDs are stored so repeated syncs do not double-count the same workout.',
+        ),
+        if (kDebugMode)
+          _infoBlock(
+            'Manual backup',
+            'Development builds can still add workouts manually for testing.',
+          ),
+        SizedBox(height: context.dimensions.values.s28),
+        _primarySheetButton(
+          label: _syncingAppleHealth
+              ? 'Syncing Apple Health...'
+              : 'Connect and sync last 7 days',
+          onPressed: _syncingAppleHealth
+              ? () {}
+              : () => _syncAppleHealthWorkouts(setPageState),
+        ),
+        if (kDebugMode) ...[
+          SizedBox(height: context.dimensions.values.s12),
+          OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: _cream,
+              side: BorderSide(color: _divider),
+              padding: EdgeInsets.symmetric(
+                vertical: context.dimensions.values.s13,
+              ),
+            ),
+            onPressed: _showAddWorkoutSheet,
+            child: Text('Add manual workout'),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Future<void> _disconnectAppleHealth(
+    AppleHealthService service,
+    StateSetter setPageState,
+  ) async {
+    await service.revokePermissions();
+    if (!mounted) return;
+    setPageState(() {});
+    Navigator.of(context).pop();
+    _showSnack('Apple Health disconnected.');
   }
 
   Future<void> _syncAppleHealthWorkouts(StateSetter setPageState) async {
