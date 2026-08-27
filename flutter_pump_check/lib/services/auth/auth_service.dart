@@ -50,7 +50,6 @@ class AuthService {
         'workoutTrackingMode': 'appleHealth',
         'streakMode': 'strict',
         'themeMode': 'dark',
-        'notificationsEnabled': true,
         'hiddenFriends': [],
         'score': 0,
         'joinedAt': FieldValue.serverTimestamp(),

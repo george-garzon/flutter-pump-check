@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -5,7 +6,6 @@ import 'dart:ui' as ui;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cupertino_native_better/cupertino_native_better.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_pump_check/theme/app_dimensions.dart';
@@ -32,6 +32,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_pump_check/theme/text_sizes.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 part 'dashboard_models.dart';
 part 'stats_share_screen.dart';
@@ -85,6 +86,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   bool _showFriends = true;
   int _settingsRefresh = 0;
   bool _syncingAppleHealth = false;
+  bool _checkedAppleHealthOnLaunch = false;
   late final TabController _tabController;
   final TextEditingController _friendUsernameController =
       TextEditingController();
@@ -96,6 +98,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     super.initState();
     _tabController = TabController(length: 5, vsync: this);
     _tabController.addListener(_syncSelectedTabIndex);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_checkAppleHealthPermissionsAfterOnboarding());
+    });
   }
 
   void _syncSelectedTabIndex() {
@@ -194,6 +199,79 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   double _sheetBottomPadding(BuildContext context, double basePadding) {
     return _adAwareBottomPadding(context, basePadding);
+  }
+
+  double _contentBottomPadding(BuildContext context, double basePadding) {
+    const navHeight = 85.0;
+    final bottomAdHeight = AdSupportedAppInsets.bottomAdHeightOf(context);
+    return bottomAdHeight + navHeight + basePadding;
+  }
+
+  Future<void> _checkAppleHealthPermissionsAfterOnboarding() async {
+    if (_checkedAppleHealthOnLaunch) return;
+    _checkedAppleHealthOnLaunch = true;
+
+    final onboardingCompleted = await OnboardingPreferences.isCompleted();
+    if (!onboardingCompleted || !mounted) return;
+
+    final settings = _user == null
+        ? await _localSettingsData()
+        : (await FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(_user!.uid)
+                      .get())
+                  .data() ??
+              await _localSettingsData();
+    final trackingMode =
+        (settings['workoutTrackingMode'] as String?) ?? 'appleHealth';
+    if (trackingMode != 'appleHealth') return;
+
+    final service = AppleHealthService();
+    if (!service.isAvailableOnDevice) return;
+
+    final hasPermissions = await service.hasRequiredPermissions();
+    if (hasPermissions || !mounted) return;
+
+    await _showAppleHealthRequiredDialog(service);
+  }
+
+  Future<void> _showAppleHealthRequiredDialog(
+    AppleHealthService service,
+  ) async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: _surface,
+          title: Text(
+            'Apple Health access required',
+            style: TextStyle(color: _cream),
+          ),
+          content: Text(
+            'Burn Camp needs Apple Health access to import workout calories and minutes. Enable Health access to keep tracking data.',
+            style: TextStyle(color: _muted),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text('Not now', style: TextStyle(color: _muted)),
+            ),
+            TextButton(
+              onPressed: () async {
+                final granted = await service.requestAuthorization();
+                if (!dialogContext.mounted) return;
+                Navigator.of(dialogContext).pop();
+                if (!granted && mounted) {
+                  _showSnack('Apple Health access is still disabled.');
+                }
+              },
+              child: Text('Enable', style: TextStyle(color: _accent)),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Widget _homeTab() {
@@ -828,14 +906,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Future<void> _toggleNotifications(bool currentlyEnabled) async {
-    final enabled = !currentlyEnabled;
-    await _updateUserSettings({'notificationsEnabled': enabled});
-    _showSnack(
-      enabled ? 'Notifications turned on.' : 'Notifications turned off.',
-    );
-  }
-
   Future<void> _showProfileSheet(Map<String, dynamic> data) async {
     final user = _user;
     if (user == null) return;
@@ -846,79 +916,40 @@ class _DashboardScreenState extends State<DashboardScreen>
     final usernameController = TextEditingController(
       text: (data['username'] as String?) ?? '',
     );
-    var photoUrl = (data['photoUrl'] as String?) ?? user.photoURL ?? '';
-    File? selectedPhoto;
+    final photoUrl = (data['photoUrl'] as String?) ?? user.photoURL ?? '';
     var saving = false;
 
     await _showSettingsSheet(
       title: 'Update Profile',
       child: StatefulBuilder(
         builder: (sheetContext, setSheetState) {
-          Future<void> pickPhoto(ImageSource source) async {
-            try {
-              final picked = await ImagePicker().pickImage(
-                source: source,
-                imageQuality: 88,
-                maxWidth: 900,
-              );
-              if (picked == null) return;
-              setSheetState(() {
-                selectedPhoto = File(picked.path);
-              });
-            } catch (e) {
-              _showSnack('Could not choose profile photo: $e');
-            }
-          }
-
           return Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Center(
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    CircleAvatar(
-                      radius: context.dimensions.values.s46,
-                      backgroundColor: _accent,
-                      backgroundImage: selectedPhoto != null
-                          ? FileImage(selectedPhoto!)
-                          : photoUrl.trim().isNotEmpty
-                          ? NetworkImage(photoUrl.trim())
-                          : null,
-                      child: selectedPhoto == null && photoUrl.trim().isEmpty
-                          ? Icon(
-                              Icons.person,
-                              color: _background,
-                              size: context.dimensions.values.s46,
-                            )
-                          : null,
-                    ),
-                    Positioned(
-                      right: -6,
-                      bottom: -6,
-                      child: IconButton.filled(
-                        style: IconButton.styleFrom(
-                          backgroundColor: _accent,
-                          foregroundColor: _onAccent,
-                        ),
-                        onPressed: () => _showProfilePhotoSourceSheet(
-                          onCamera: () => pickPhoto(ImageSource.camera),
-                          onGallery: () => pickPhoto(ImageSource.gallery),
-                          onRemove:
-                              photoUrl.trim().isEmpty && selectedPhoto == null
-                              ? null
-                              : () {
-                                  setSheetState(() {
-                                    selectedPhoto = null;
-                                    photoUrl = '';
-                                  });
-                                },
-                        ),
-                        icon: Icon(Icons.camera_alt_outlined),
-                      ),
-                    ),
-                  ],
+                child: CircleAvatar(
+                  radius: context.dimensions.values.s46,
+                  backgroundColor: _accent,
+                  backgroundImage: photoUrl.trim().isNotEmpty
+                      ? NetworkImage(photoUrl.trim())
+                      : null,
+                  child: photoUrl.trim().isEmpty
+                      ? Icon(
+                          Icons.person,
+                          color: _background,
+                          size: context.dimensions.values.s46,
+                        )
+                      : null,
+                ),
+              ),
+              SizedBox(height: context.dimensions.values.s10),
+              Text(
+                'Profile picture updates are disabled for now.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _muted,
+                  fontSize: context.textSizes.s14,
                 ),
               ),
               SizedBox(height: context.dimensions.values.s22),
@@ -948,21 +979,10 @@ class _DashboardScreenState extends State<DashboardScreen>
 
                         setSheetState(() => saving = true);
                         try {
-                          var nextPhotoUrl = photoUrl;
-                          if (selectedPhoto != null) {
-                            nextPhotoUrl = await _uploadProfilePhoto(
-                              selectedPhoto!,
-                            );
-                          }
-
                           await user.updateDisplayName(name);
-                          await user.updatePhotoURL(
-                            nextPhotoUrl.trim().isEmpty ? null : nextPhotoUrl,
-                          );
                           await _updateUserSettings({
                             'name': name,
                             'username': username,
-                            'photoUrl': nextPhotoUrl,
                           });
 
                           if (!mounted) return;
@@ -982,92 +1002,6 @@ class _DashboardScreenState extends State<DashboardScreen>
         },
       ),
     );
-  }
-
-  Future<void> _showProfilePhotoSourceSheet({
-    required VoidCallback onCamera,
-    required VoidCallback onGallery,
-    VoidCallback? onRemove,
-  }) {
-    return showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: _background,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(context.dimensions.values.s22),
-        ),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              context.dimensions.values.s24,
-              context.dimensions.values.s18,
-              context.dimensions.values.s24,
-              _adAwareBottomPadding(context, context.dimensions.values.s24),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.camera_alt_outlined, color: _accent),
-                  title: Text('Take photo', style: TextStyle(color: _cream)),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    onCamera();
-                  },
-                ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.photo_library_outlined, color: _accent),
-                  title: Text(
-                    'Choose from camera roll',
-                    style: TextStyle(color: _cream),
-                  ),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    onGallery();
-                  },
-                ),
-                if (onRemove != null)
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.delete_outline, color: _muted),
-                    title: Text(
-                      'Remove current photo',
-                      style: TextStyle(color: _cream),
-                    ),
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      onRemove();
-                    },
-                  ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Future<String> _uploadProfilePhoto(File imageFile) async {
-    final user = _user;
-    if (user == null) {
-      throw StateError('Sign in to upload a profile photo.');
-    }
-
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final ref = FirebaseStorage.instance
-        .ref()
-        .child('profile_photos')
-        .child(user.uid)
-        .child('profile-$timestamp.jpg');
-    final task = await ref.putFile(
-      imageFile,
-      SettableMetadata(contentType: 'image/jpeg'),
-    );
-    return task.ref.getDownloadURL();
   }
 
   Future<void> _showRecapsSheet() async {
@@ -2606,13 +2540,13 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
           _detailListTile(
             title: 'Send feedback',
-            subtitle: 'Share what should be improved next.',
+            subtitle: 'Email George.garzon@outlook.com.',
             icon: Icons.feedback_outlined,
-            onTap: () => _shareText(context, 'Burn Camp feedback: '),
+            onTap: _emailHelpAndFeedback,
           ),
           SizedBox(height: context.dimensions.values.s18),
           Text(
-            'Support note: this screen is local for now. Hook it to email, a feedback form, or your support inbox when ready.',
+            'Feedback opens your email app addressed to George.garzon@outlook.com.',
             style: TextStyle(color: _muted, fontSize: context.textSizes.s15),
           ),
         ],
@@ -2684,6 +2618,21 @@ class _DashboardScreenState extends State<DashboardScreen>
         ),
       ),
     );
+  }
+
+  Future<void> _emailHelpAndFeedback() async {
+    final uri = Uri(
+      scheme: 'mailto',
+      path: 'George.garzon@outlook.com',
+      queryParameters: const {'subject': 'Burn Camp help and feedback'},
+    );
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      return;
+    }
+
+    _showSnack('No email app found. Email George.garzon@outlook.com.');
   }
 
   Future<void> _showWebDrawer({required String title, required String url}) {
@@ -2944,6 +2893,10 @@ class _DashboardScreenState extends State<DashboardScreen>
           await prefs.setStringList(key, value);
         }
       }
+      final goalCalories = values['goalCalories'];
+      if (goalCalories is int) {
+        await WorkoutService.updateGoalCalories(goalCalories);
+      }
       if (mounted) setState(() => _settingsRefresh++);
       return;
     }
@@ -2952,6 +2905,11 @@ class _DashboardScreenState extends State<DashboardScreen>
       ...values,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
+
+    final goalCalories = values['goalCalories'];
+    if (goalCalories is int) {
+      await WorkoutService.updateGoalCalories(goalCalories);
+    }
   }
 
   Future<Map<String, dynamic>> _localSettingsData() async {
@@ -2970,8 +2928,6 @@ class _DashboardScreenState extends State<DashboardScreen>
           'appleHealth',
       'streakMode': prefs.getString('settings.streakMode') ?? 'strict',
       'themeMode': prefs.getString('settings.themeMode') ?? 'dark',
-      'notificationsEnabled':
-          prefs.getBool('settings.notificationsEnabled') ?? true,
       'hiddenFriends': prefs.getStringList('settings.hiddenFriends') ?? [],
     };
   }

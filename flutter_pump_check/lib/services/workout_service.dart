@@ -291,7 +291,12 @@ class WorkoutService {
     final previousMinutes =
         (existing['totalMinutesTrained'] as num?)?.toInt() ?? 0;
     final previousEntryCount = (existing['entryCount'] as num?)?.toInt() ?? 0;
-    final goalCalories = (existing['goalCalories'] as num?)?.toInt() ?? 500;
+    final prefs = await SharedPreferences.getInstance();
+    final goalCalories =
+        prefs.getInt('settings.goalCalories') ??
+        prefs.getInt('onboarding.calorieGoal') ??
+        (existing['goalCalories'] as num?)?.toInt() ??
+        500;
     final totalCalories = previousCalories + caloriesBurned;
     final totalMinutes = previousMinutes + minutesTrained;
 
@@ -324,6 +329,57 @@ class WorkoutService {
 
     await _saveLocalSummaries(summaries);
     return true;
+  }
+
+  static Future<void> updateGoalCalories(int goalCalories) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('settings.goalCalories', goalCalories);
+      final summaries = await _localSummaries();
+      final updated = summaries.map((summary) {
+        final calories = caloriesFromSummary(summary);
+        return {
+          ...summary,
+          'goalCalories': goalCalories,
+          'goalMet': goalCalories > 0 && calories >= goalCalories,
+        };
+      }).toList();
+      await _saveLocalSummaries(updated);
+      return;
+    }
+
+    final snapshots = await _db
+        .collection('workouts')
+        .where('userId', isEqualTo: user.uid)
+        .get();
+    WriteBatch? batch;
+    var operationCount = 0;
+
+    Future<void> commitBatch() async {
+      if (batch == null || operationCount == 0) return;
+      await batch!.commit();
+      batch = null;
+      operationCount = 0;
+    }
+
+    for (final doc in snapshots.docs) {
+      batch ??= _db.batch();
+      final summary = doc.data();
+      final calories = caloriesFromSummary(summary);
+      batch!.set(doc.reference, {
+        'goalCalories': goalCalories,
+        'goalMet': goalCalories > 0 && calories >= goalCalories,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      operationCount++;
+
+      if (operationCount >= 450) {
+        await commitBatch();
+      }
+    }
+
+    await commitBatch();
   }
 
   static Future<List<Map<String, dynamic>>> _localSummaries() async {

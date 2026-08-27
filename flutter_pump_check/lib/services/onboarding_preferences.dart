@@ -80,8 +80,6 @@ class OnboardingPreferences {
       'workoutTrackingMode': data['workoutTrackingMode'] ?? 'appleHealth',
       if (existing['streakMode'] == null) 'streakMode': 'strict',
       if (existing['themeMode'] == null) 'themeMode': 'dark',
-      if (existing['notificationsEnabled'] == null)
-        'notificationsEnabled': true,
       if (existing['hiddenFriends'] == null) 'hiddenFriends': [],
       if (existing['score'] == null) 'score': 0,
       'updatedAt': FieldValue.serverTimestamp(),

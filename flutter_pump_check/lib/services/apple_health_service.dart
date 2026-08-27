@@ -37,6 +37,14 @@ class AppleHealthService {
     return _health.requestAuthorization(_types, permissions: _permissions);
   }
 
+  Future<bool> hasRequiredPermissions() async {
+    if (!isAvailableOnDevice) return false;
+
+    await _health.configure();
+    return await _health.hasPermissions(_types, permissions: _permissions) ==
+        true;
+  }
+
   Future<AppleHealthImportResult> importRecentWorkouts({
     Duration lookback = const Duration(days: 7),
   }) async {

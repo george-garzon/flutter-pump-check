@@ -38,6 +38,7 @@ dependencies:
   fl_chart: ^0.70.0
   intl: ^0.20.2
   share_plus: ^13.3.0
+  url_launcher: ^6.3.2
   firebase_core: ^3.5.0
   firebase_auth: ^5.3.0
   cloud_firestore: ^5.4.0
