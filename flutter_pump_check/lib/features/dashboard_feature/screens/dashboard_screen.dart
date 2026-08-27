@@ -9,7 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:flutter_pump_check/screens/onboarding_screen.dart';
+import 'package:flutter_pump_check/features/onboarding_feature/screens/onboarding_screen.dart';
 import 'package:flutter_pump_check/services/apple_health_service.dart';
 import 'package:flutter_pump_check/services/auth/auth_service.dart';
 import 'package:flutter_pump_check/services/onboarding_preferences.dart';

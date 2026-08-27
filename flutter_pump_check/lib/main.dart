@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_pump_check/features/onboarding_feature/screens/onboarding_screen.dart';
 import 'package:flutter_pump_check/features/login_feature/screens/splash_screen.dart';
 import 'package:flutter_pump_check/widgets/ad_supported_app_shell.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,7 +14,6 @@ import 'theme/app_gradient_background.dart';
 import 'theme/app_scroll_behavior.dart';
 import 'theme/app_theme_mode.dart';
 import 'theme/theme.dart';
-import 'screens/onboarding_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_pump_check/features/onboarding_feature/screens/onboarding_screen.dart';
 
 import '../features/dashboard_feature/screens/dashboard_screen.dart';
 import '../services/onboarding_preferences.dart';
 import '../theme/app_theme_mode.dart';
-import 'onboarding_screen.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
