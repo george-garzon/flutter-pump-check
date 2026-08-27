@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cupertino_native/cupertino_native.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
@@ -20,6 +21,7 @@ import 'package:flutter_pump_check/theme/app_gradient_background.dart';
 import 'package:flutter_pump_check/theme/app_theme_mode.dart';
 import 'package:flutter_pump_check/theme/claude_palette.dart';
 import 'package:flutter_pump_check/utils/messages.dart' as preset_messages;
+import 'package:flutter_pump_check/widgets/ad_supported_app_shell.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -39,7 +41,8 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState extends State<DashboardScreen>
+    with SingleTickerProviderStateMixin {
   static const _accent = ClaudePalette.accent;
   static const _goalLime = ClaudePalette.goal;
   static const _freeGroupLimit = 5;
@@ -65,19 +68,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _showFriends = true;
   int _settingsRefresh = 0;
   bool _syncingAppleHealth = false;
+  late final TabController _tabController;
   final TextEditingController _friendUsernameController =
       TextEditingController();
 
   User? get _user => FirebaseAuth.instance.currentUser;
 
   @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 5, vsync: this);
+    _tabController.addListener(_syncSelectedTabIndex);
+  }
+
+  void _syncSelectedTabIndex() {
+    if (_tabController.index != _selectedIndex) {
+      setState(() => _selectedIndex = _tabController.index);
+    }
+  }
+
+  void _selectTab(int index) {
+    if (index == _selectedIndex) return;
+
+    setState(() => _selectedIndex = index);
+    _tabController.animateTo(index);
+  }
+
+  @override
   void dispose() {
+    _tabController
+      ..removeListener(_syncSelectedTabIndex)
+      ..dispose();
     _friendUsernameController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    const navHeight = 85.0;
+    final bottomAdHeight = AdSupportedAppInsets.bottomAdHeightOf(context);
+    final navBottomMargin = context.dimensions.values.s4;
+    final navBottomOffset = bottomAdHeight + navBottomMargin;
     final screens = [
       _homeTab(),
       _historyTab(),
@@ -88,37 +119,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: SafeArea(
-        bottom: false,
-        child: IndexedStack(index: _selectedIndex, children: screens),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        backgroundColor: _surface,
-        selectedItemColor: _accent,
-        unselectedItemColor: _cream,
-        type: BottomNavigationBarType.fixed,
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
-        iconSize: 29,
-        onTap: (index) => setState(() => _selectedIndex = index),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: ''),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.insert_chart_outlined),
-            label: '',
+      extendBody: true,
+      body: Stack(
+        children: [
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: EdgeInsets.only(bottom: navHeight + navBottomOffset),
+              child: TabBarView(
+                controller: _tabController,
+                physics: const NeverScrollableScrollPhysics(),
+                children: screens,
+              ),
+            ),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.notifications_none),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings_outlined),
-            label: '',
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Padding(
+              padding: EdgeInsets.only(bottom: navBottomOffset),
+              child: CNTabBar(
+                backgroundColor: Colors.transparent,
+                items: const [
+                  CNTabBarItem(label: 'Home', icon: CNSymbol('house.fill')),
+                  CNTabBarItem(
+                    label: 'Stats',
+                    icon: CNSymbol('chart.bar.fill'),
+                  ),
+                  CNTabBarItem(
+                    label: 'Social',
+                    icon: CNSymbol('person.2.fill'),
+                  ),
+                  CNTabBarItem(label: 'Activity', icon: CNSymbol('bell.fill')),
+                  CNTabBarItem(
+                    label: 'Settings',
+                    icon: CNSymbol('gearshape.fill'),
+                  ),
+                ],
+                currentIndex: _selectedIndex,
+                tint: _accent,
+                height: navHeight,
+                onTap: _selectTab,
+              ),
+            ),
           ),
         ],
       ),
@@ -201,7 +243,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             color: _muted,
                             size: context.dimensions.values.s44,
                           ),
-                          onPressed: () => setState(() => _selectedIndex = 1),
+                          onPressed: () => _selectTab(1),
                         ),
                       ],
                     ),

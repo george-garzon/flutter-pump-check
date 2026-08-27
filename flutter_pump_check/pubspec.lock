@@ -177,6 +177,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.8"
+  cupertino_native:
+    dependency: "direct main"
+    description:
+      path: "packages/cupertino_native"
+      relative: true
+    source: path
+    version: "0.1.1"
   dart_style:
     dependency: transitive
     description:

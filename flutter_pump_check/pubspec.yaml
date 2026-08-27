@@ -61,6 +61,8 @@ dependencies:
   firebase_storage: ^12.4.10
   font_awesome_flutter: ^11.0.0
   google_mobile_ads: ^9.1.0
+  cupertino_native:
+    path: packages/cupertino_native
 
 dev_dependencies:
   flutter_test:

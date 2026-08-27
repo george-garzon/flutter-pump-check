@@ -15,8 +15,7 @@ class AppTextSizes {
     final shortestSide = mediaQuery.size.shortestSide;
 
     final scale = switch (shortestSide) {
-      < 390 => 0.94,
-      < 600 => 1.0,
+      < 600 => 0.80,
       < 900 => 1.12,
       _ => 1.2,
     };

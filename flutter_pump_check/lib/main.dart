@@ -9,7 +9,6 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import 'features/dashboard_feature/screens/dashboard_screen.dart';
 import 'firebase_options.dart';
-import 'theme/app_scale.dart';
 import 'theme/app_gradient_background.dart';
 import 'theme/app_scroll_behavior.dart';
 import 'theme/app_theme_mode.dart';
@@ -57,10 +56,8 @@ class WorkoutBuddyApp extends StatelessWidget {
           scrollBehavior: const AppScrollBehavior(),
           builder: (context, child) {
             return AppGradientBackground(
-              child: AppScale(
-                child: AdSupportedAppShell(
-                  child: child ?? const SizedBox.shrink(),
-                ),
+              child: AdSupportedAppShell(
+                child: child ?? const SizedBox.shrink(),
               ),
             );
           },
