@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pump_check/theme/app_dimensions.dart';
 import 'package:flutter_pump_check/theme/theme.dart';
 import '../models/friend.dart';
 import 'progress_ring.dart'; // 👈 ADD THIS
@@ -16,24 +17,26 @@ class FriendTile extends StatelessWidget {
 
     return Card(
       color: colors.black,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(context.dimensions.values.s16),
+      ),
+      margin: EdgeInsets.symmetric(vertical: context.dimensions.values.s8),
       child: ListTile(
         leading: Stack(
           alignment: Alignment.center,
           children: [
             ProgressRing(
               progress: friend.completion, // new property on Friend model
-              size: 50,
+              size: context.dimensions.values.s50,
             ),
-            const CircleAvatar(radius: 20),
+            CircleAvatar(radius: context.dimensions.values.s20),
           ],
         ),
 
         title: Text(friend.name, style: theme.textTheme.bodyMedium),
         subtitle: Text(friend.username, style: theme.textTheme.bodySmall),
         trailing: IconButton(
-          icon: const Icon(Icons.send),
+          icon: Icon(Icons.send),
           color: theme.colorScheme.primary,
           onPressed: onSend,
         ),

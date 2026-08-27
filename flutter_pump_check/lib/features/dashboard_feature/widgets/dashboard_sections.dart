@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pump_check/theme/app_dimensions.dart';
 import 'package:flutter_pump_check/theme/claude_palette.dart';
+import 'package:flutter_pump_check/theme/text_sizes.dart';
 
 class DashboardTopHeader extends StatelessWidget {
   final String title;
@@ -22,12 +24,17 @@ class DashboardTopHeader extends StatelessWidget {
     return Column(
       children: [
         SizedBox(
-          height: 86,
+          height: context.dimensions.values.s86,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: EdgeInsets.symmetric(
+              horizontal: context.dimensions.values.s16,
+            ),
             child: Row(
               children: [
-                SizedBox(width: 56, child: Center(child: leading)),
+                SizedBox(
+                  width: context.dimensions.values.s56,
+                  child: Center(child: leading),
+                ),
                 Expanded(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -35,9 +42,9 @@ class DashboardTopHeader extends StatelessWidget {
                       Icon(
                         Icons.local_fire_department,
                         color: foreground,
-                        size: 24,
+                        size: context.dimensions.values.s24,
                       ),
-                      const SizedBox(width: 8),
+                      SizedBox(width: context.dimensions.values.s8),
                       Flexible(
                         child: Text(
                           title,
@@ -45,7 +52,7 @@ class DashboardTopHeader extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: foreground,
-                            fontSize: 22,
+                            fontSize: context.textSizes.s22,
                             fontWeight: FontWeight.w700,
                             fontStyle: FontStyle.italic,
                           ),
@@ -54,7 +61,10 @@ class DashboardTopHeader extends StatelessWidget {
                     ],
                   ),
                 ),
-                SizedBox(width: 56, child: Center(child: trailing)),
+                SizedBox(
+                  width: context.dimensions.values.s56,
+                  child: Center(child: trailing),
+                ),
               ],
             ),
           ),
@@ -74,7 +84,10 @@ class DashboardSegmentTab<T> {
   factory DashboardSegmentTab.text({required T value, required String label}) {
     return DashboardSegmentTab<T>(
       value: value,
-      child: Text(label, style: const TextStyle(fontSize: 16)),
+      child: Builder(
+        builder: (context) =>
+            Text(label, style: TextStyle(fontSize: context.textSizes.s16)),
+      ),
     );
   }
 }
@@ -86,7 +99,7 @@ class DashboardSegmentedTabs<T> extends StatelessWidget {
   final double height;
   final Color foreground;
   final Color selectedBackground;
-  final EdgeInsetsGeometry tabMargin;
+  final EdgeInsetsGeometry? tabMargin;
   final EdgeInsetsGeometry tabPadding;
 
   const DashboardSegmentedTabs({
@@ -97,7 +110,7 @@ class DashboardSegmentedTabs<T> extends StatelessWidget {
     required this.foreground,
     required this.selectedBackground,
     this.height = 46,
-    this.tabMargin = const EdgeInsets.symmetric(horizontal: 5),
+    this.tabMargin,
     this.tabPadding = EdgeInsets.zero,
   });
 
@@ -112,13 +125,21 @@ class DashboardSegmentedTabs<T> extends StatelessWidget {
             child: Padding(
               padding: tabPadding,
               child: InkWell(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(
+                  context.dimensions.values.s12,
+                ),
                 onTap: () => onSelected(tab.value),
                 child: Container(
-                  margin: tabMargin,
+                  margin:
+                      tabMargin ??
+                      EdgeInsets.symmetric(
+                        horizontal: context.dimensions.values.s5,
+                      ),
                   decoration: BoxDecoration(
                     color: selected ? selectedBackground : Colors.transparent,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(
+                      context.dimensions.values.s12,
+                    ),
                   ),
                   alignment: Alignment.center,
                   child: DefaultTextStyle.merge(
@@ -186,15 +207,19 @@ class DashboardEmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 38),
+      padding: EdgeInsets.symmetric(horizontal: context.dimensions.values.s38),
       children: [
         SizedBox(height: MediaQuery.of(context).size.height * 0.18),
-        Icon(icon, color: muted, size: 74),
-        const SizedBox(height: 26),
+        Icon(icon, color: muted, size: context.dimensions.values.s74),
+        SizedBox(height: context.dimensions.values.s26),
         Text(
           message,
           textAlign: TextAlign.center,
-          style: TextStyle(color: muted, fontSize: 21, height: 1.25),
+          style: TextStyle(
+            color: muted,
+            fontSize: context.textSizes.s21,
+            height: 1.25,
+          ),
         ),
       ],
     );
@@ -205,23 +230,23 @@ class DashboardCardShell extends StatelessWidget {
   final Widget child;
   final Color surface;
   final Color border;
-  final EdgeInsetsGeometry padding;
+  final EdgeInsetsGeometry? padding;
 
   const DashboardCardShell({
     super.key,
     required this.child,
     required this.surface,
     required this.border,
-    this.padding = const EdgeInsets.all(16),
+    this.padding,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: padding,
+      padding: padding ?? EdgeInsets.all(context.dimensions.values.s16),
       decoration: BoxDecoration(
         color: surface,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(context.dimensions.values.s18),
         border: Border.all(color: border),
       ),
       child: child,

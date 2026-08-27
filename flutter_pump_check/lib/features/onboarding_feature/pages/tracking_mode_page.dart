@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_pump_check/features/onboarding_feature/widgets/onboarding_cards.dart';
+import 'package:flutter_pump_check/features/onboarding_feature/widgets/onboarding_gaps.dart';
 import 'package:flutter_pump_check/features/onboarding_feature/widgets/onboarding_page_shell.dart';
 import 'package:flutter_pump_check/features/onboarding_feature/widgets/onboarding_text.dart';
+import 'package:flutter_pump_check/theme/app_dimensions.dart';
 
 class TrackingModeOnboardingPage extends StatelessWidget {
   const TrackingModeOnboardingPage({
@@ -15,19 +17,21 @@ class TrackingModeOnboardingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final spacing = context.dimensions.spacing;
+
     return OnboardingPageShell(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 22),
+          GapH(spacing.sectionMedium),
           const OnboardingEyebrow('Tracking style'),
-          const SizedBox(height: 12),
+          GapH(spacing.lg),
           const OnboardingTitle('How do you want to track workouts?'),
-          const SizedBox(height: 10),
+          GapH(spacing.md),
           const OnboardingBody(
             'Manual is selected by default. You can switch later in Settings.',
           ),
-          const SizedBox(height: 28),
+          GapH(spacing.sectionXXLarge),
           TrackingChoiceCard(
             selected: trackingMode == 'manual',
             icon: Icons.edit_note,
@@ -44,7 +48,7 @@ class TrackingModeOnboardingPage extends StatelessWidget {
                 'Sync workouts from Apple Health on iPhone when permissions are enabled.',
             onTap: () => onTrackingModeChanged('appleHealth'),
           ),
-          const SizedBox(height: 20),
+          GapH(spacing.sectionSmall),
           const OnboardingBody(
             'Recommended: Manual for the cleanest first setup.',
           ),

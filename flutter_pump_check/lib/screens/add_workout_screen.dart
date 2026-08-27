@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pump_check/theme/app_dimensions.dart';
 import '../services/workout_service.dart';
 
 class AddWorkoutScreen extends StatefulWidget {
@@ -16,7 +17,7 @@ class _AddWorkoutScreenState extends State<AddWorkoutScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Log Workout')),
       body: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(context.dimensions.values.s16),
         child: Column(
           children: [
             TextFormField(
@@ -26,7 +27,7 @@ class _AddWorkoutScreenState extends State<AddWorkoutScreen> {
                 labelText: 'Minutes worked out',
               ),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: context.dimensions.values.s20),
             ElevatedButton(
               onPressed: () {
                 final minutes = int.tryParse(_controller.text) ?? 0;

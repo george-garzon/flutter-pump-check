@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_pump_check/features/onboarding_feature/widgets/onboarding_cards.dart';
+import 'package:flutter_pump_check/features/onboarding_feature/widgets/onboarding_gaps.dart';
 import 'package:flutter_pump_check/features/onboarding_feature/widgets/onboarding_page_shell.dart';
 import 'package:flutter_pump_check/features/onboarding_feature/widgets/onboarding_text.dart';
+import 'package:flutter_pump_check/theme/app_dimensions.dart';
 
 class SingleChoiceOnboardingPage extends StatelessWidget {
   const SingleChoiceOnboardingPage({
@@ -23,17 +25,19 @@ class SingleChoiceOnboardingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final spacing = context.dimensions.spacing;
+
     return OnboardingPageShell(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 22),
+          GapH(spacing.sectionMedium),
           OnboardingEyebrow(eyebrow),
-          const SizedBox(height: 12),
+          GapH(spacing.lg),
           OnboardingTitle(title),
-          const SizedBox(height: 10),
+          GapH(spacing.md),
           OnboardingBody(subtitle),
-          const SizedBox(height: 28),
+          GapH(spacing.sectionXXLarge),
           ...options.map(
             (option) => ChoiceCard(
               label: option,

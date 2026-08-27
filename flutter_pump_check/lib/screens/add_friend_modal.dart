@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pump_check/theme/app_dimensions.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -10,7 +11,9 @@ Future<void> showAddFriendModal(BuildContext context) async {
   await showDialog(
     context: context,
     builder: (ctx) => AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(context.dimensions.values.s24),
+      ),
       title: const Text("Add Friend by Username"),
       content: TextField(
         controller: usernameController,

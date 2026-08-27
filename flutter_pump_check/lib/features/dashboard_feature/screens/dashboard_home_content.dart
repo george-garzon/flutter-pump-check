@@ -1,5 +1,6 @@
 // flutter_pump_check/lib/features/dashboard_feature/screens/dashboard_home_content.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_pump_check/theme/app_dimensions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../screens/create_group_modal.dart';
@@ -13,6 +14,7 @@ import '../../../widgets/friend_tile.dart';
 import '../../../screens/message_dialog.dart';
 import '../../../screens/add_friend_modal.dart';
 import '../../../../../../theme/theme.dart';
+import 'package:flutter_pump_check/theme/text_sizes.dart';
 
 class DashboardHomeContent extends StatefulWidget {
   const DashboardHomeContent({super.key});
@@ -77,7 +79,7 @@ class _DashboardHomeContentState extends State<DashboardHomeContent> {
     final colors = context.theme.appColors;
 
     if (user == null) {
-      return const Center(child: Text('Not logged in'));
+      return Center(child: Text('Not logged in'));
     }
 
     final userDoc = FirebaseFirestore.instance
@@ -88,13 +90,13 @@ class _DashboardHomeContentState extends State<DashboardHomeContent> {
       stream: userDoc.snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
+          return Center(
             child: CircularProgressIndicator(color: Color(0xFF9BBF9E)),
           );
         }
 
         if (!snapshot.hasData || !snapshot.data!.exists) {
-          return const Center(child: Text("No user data found"));
+          return Center(child: Text("No user data found"));
         }
 
         final data = snapshot.data!.data() as Map<String, dynamic>;
@@ -106,7 +108,7 @@ class _DashboardHomeContentState extends State<DashboardHomeContent> {
           backgroundColor: Colors.transparent,
           body: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: EdgeInsets.all(context.dimensions.values.s16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -117,7 +119,7 @@ class _DashboardHomeContentState extends State<DashboardHomeContent> {
                     score: score,
                     onWorkoutAdded: () => setState(() {}),
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: context.dimensions.values.s20),
 
                   SectionHeader(
                     title: "Groups",
@@ -144,7 +146,7 @@ class _DashboardHomeContentState extends State<DashboardHomeContent> {
                     stream: getGroupsStream(user.uid),
                     builder: (context, snapshot) {
                       if (!snapshot.hasData) {
-                        return const Center(child: CircularProgressIndicator());
+                        return Center(child: CircularProgressIndicator());
                       }
 
                       final groups = snapshot.data!;
@@ -164,7 +166,7 @@ class _DashboardHomeContentState extends State<DashboardHomeContent> {
                     },
                   ),
 
-                  const SizedBox(height: 20),
+                  SizedBox(height: context.dimensions.values.s20),
                   SectionHeader(
                     title: "Friends",
                     onAdd: () async {
@@ -179,9 +181,7 @@ class _DashboardHomeContentState extends State<DashboardHomeContent> {
                       stream: getFriendsStream(user.uid),
                       builder: (context, snapshot) {
                         if (!snapshot.hasData) {
-                          return const Center(
-                            child: CircularProgressIndicator(),
-                          );
+                          return Center(child: CircularProgressIndicator());
                         }
                         final friends = snapshot.data!;
                         if (friends.isEmpty) {
@@ -254,13 +254,13 @@ class _DashboardHomeContentState extends State<DashboardHomeContent> {
           title,
           style: theme.textTheme.bodyMedium!.copyWith(
             fontWeight: FontWeight.bold,
-            fontSize: 16,
+            fontSize: context.textSizes.s16,
           ),
         ),
         Row(
           children: [
             if (onAdd != null)
-              IconButton(onPressed: onAdd, icon: const Icon(Icons.add)),
+              IconButton(onPressed: onAdd, icon: Icon(Icons.add)),
             if (onAction != null && actionLabel != null)
               TextButton(
                 onPressed: onAction,
@@ -280,9 +280,11 @@ class _DashboardHomeContentState extends State<DashboardHomeContent> {
     final theme = Theme.of(context);
     return Card(
       color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(context.dimensions.values.s16),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(context.dimensions.values.s24),
         child: Center(
           child: Text(text, style: TextStyle(color: Colors.black)),
         ),

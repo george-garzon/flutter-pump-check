@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pump_check/features/onboarding_feature/widgets/onboarding_gaps.dart';
+import 'package:flutter_pump_check/theme/app_dimensions.dart';
 import 'package:flutter_pump_check/theme/claude_palette.dart';
+import 'package:flutter_pump_check/theme/text_sizes.dart';
 
 class OnboardingIconBadge extends StatelessWidget {
   const OnboardingIconBadge(this.icon, {super.key});
@@ -8,14 +11,20 @@ class OnboardingIconBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dimensions = context.dimensions;
+
     return Container(
-      width: 72,
-      height: 72,
+      width: dimensions.components.iconBadge,
+      height: dimensions.components.iconBadge,
       decoration: BoxDecoration(
         color: ClaudePalette.accent,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(dimensions.radii.card),
       ),
-      child: Icon(icon, color: ClaudePalette.charcoal, size: 42),
+      child: Icon(
+        icon,
+        color: ClaudePalette.charcoal,
+        size: dimensions.icons.xxl,
+      ),
     );
   }
 }
@@ -25,33 +34,42 @@ class MockMetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dimensions = context.dimensions;
+    final spacing = dimensions.spacing;
+
     return Container(
-      padding: const EdgeInsets.all(22),
+      padding: EdgeInsets.all(spacing.sectionMedium),
       decoration: BoxDecoration(
         color: ClaudePalette.charcoalSurface,
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.circular(dimensions.radii.cardLarge),
         border: Border.all(color: ClaudePalette.charcoalBorder),
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'calories today',
-            style: TextStyle(color: ClaudePalette.mutedText, fontSize: 17),
+            style: TextStyle(
+              color: ClaudePalette.mutedText,
+              fontSize: context.textSizes.s17,
+            ),
           ),
-          SizedBox(height: 8),
+          GapH(spacing.sm),
           Text(
             '500',
             style: TextStyle(
               color: ClaudePalette.cream,
-              fontSize: 64,
+              fontSize: context.textSizes.s64,
               fontWeight: FontWeight.w900,
             ),
           ),
-          SizedBox(height: 8),
+          GapH(spacing.sm),
           Text(
             '45 min trained · streak protected',
-            style: TextStyle(color: ClaudePalette.accent, fontSize: 16),
+            style: TextStyle(
+              color: ClaudePalette.accent,
+              fontSize: context.textSizes.s16,
+            ),
           ),
         ],
       ),
@@ -73,35 +91,38 @@ class FeatureTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dimensions = context.dimensions;
+    final spacing = dimensions.spacing;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      margin: EdgeInsets.only(bottom: spacing.lg),
+      padding: EdgeInsets.all(spacing.xxl),
       decoration: BoxDecoration(
         color: ClaudePalette.charcoalSurface,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(dimensions.radii.lg),
       ),
       child: Row(
         children: [
-          Icon(icon, color: ClaudePalette.accent, size: 30),
-          const SizedBox(width: 14),
+          Icon(icon, color: ClaudePalette.accent, size: dimensions.icons.lg),
+          GapW(spacing.xl),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: ClaudePalette.cream,
-                    fontSize: 18,
+                    fontSize: context.textSizes.s18,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 4),
+                GapH(spacing.xxs),
                 Text(
                   body,
                   style: TextStyle(
                     color: ClaudePalette.mutedText,
-                    fontSize: 14,
+                    fontSize: context.textSizes.s14,
                     height: 1.25,
                   ),
                 ),
@@ -128,18 +149,21 @@ class ChoiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dimensions = context.dimensions;
+    final spacing = dimensions.spacing;
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.only(bottom: spacing.lg),
       child: InkWell(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(dimensions.radii.lg),
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.all(18),
+          padding: EdgeInsets.all(spacing.xxxl),
           decoration: BoxDecoration(
             color: selected
                 ? ClaudePalette.accent
                 : ClaudePalette.charcoalSurface,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(dimensions.radii.lg),
             border: Border.all(
               color: selected
                   ? ClaudePalette.accent
@@ -155,7 +179,7 @@ class ChoiceCard extends StatelessWidget {
                     color: selected
                         ? ClaudePalette.charcoal
                         : ClaudePalette.cream,
-                    fontSize: 18,
+                    fontSize: context.textSizes.s18,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -192,18 +216,21 @@ class TrackingChoiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dimensions = context.dimensions;
+    final spacing = dimensions.spacing;
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.only(bottom: spacing.lg),
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(dimensions.radii.xl),
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.all(18),
+          padding: EdgeInsets.all(spacing.xxxl),
           decoration: BoxDecoration(
             color: selected
                 ? ClaudePalette.accent
                 : ClaudePalette.charcoalSurface,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(dimensions.radii.xl),
             border: Border.all(
               color: selected
                   ? ClaudePalette.accent
@@ -213,7 +240,7 @@ class TrackingChoiceCard extends StatelessWidget {
           child: Row(
             children: [
               CircleAvatar(
-                radius: 24,
+                radius: dimensions.components.trackingAvatarRadius,
                 backgroundColor: selected
                     ? ClaudePalette.charcoal
                     : ClaudePalette.charcoalBorder,
@@ -222,7 +249,7 @@ class TrackingChoiceCard extends StatelessWidget {
                   color: selected ? ClaudePalette.accent : ClaudePalette.cream,
                 ),
               ),
-              const SizedBox(width: 14),
+              GapW(spacing.xl),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -233,25 +260,25 @@ class TrackingChoiceCard extends StatelessWidget {
                         color: selected
                             ? ClaudePalette.charcoal
                             : ClaudePalette.cream,
-                        fontSize: 18,
+                        fontSize: context.textSizes.s18,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                    const SizedBox(height: 5),
+                    GapH(spacing.xs),
                     Text(
                       subtitle,
                       style: TextStyle(
                         color: selected
                             ? ClaudePalette.charcoal.withValues(alpha: 0.75)
                             : ClaudePalette.mutedText,
-                        fontSize: 14,
+                        fontSize: context.textSizes.s14,
                         height: 1.25,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
+              GapW(spacing.md),
               Icon(
                 selected ? Icons.check_circle : Icons.circle_outlined,
                 color: selected

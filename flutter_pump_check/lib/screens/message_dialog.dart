@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pump_check/theme/app_dimensions.dart';
 import '../utils/messages.dart';
 
 Future<String?> showMessageDialog(BuildContext context, String initial) async {
@@ -10,7 +11,9 @@ Future<String?> showMessageDialog(BuildContext context, String initial) async {
     builder: (ctx) {
       final theme = Theme.of(context);
       return AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(context.dimensions.values.s20),
+        ),
         title: const Text(
           'Send Encouragement 💬',
           style: TextStyle(fontWeight: FontWeight.bold),
@@ -31,7 +34,7 @@ Future<String?> showMessageDialog(BuildContext context, String initial) async {
                 }
               },
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: context.dimensions.values.s10),
             TextField(
               controller: controller,
               maxLines: 2,
@@ -53,7 +56,9 @@ Future<String?> showMessageDialog(BuildContext context, String initial) async {
               backgroundColor: theme.colorScheme.primary,
               foregroundColor: Colors.white, // ✅ Fix: make “Send” visible
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(
+                  context.dimensions.values.s12,
+                ),
               ),
             ),
             child: const Text(

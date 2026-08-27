@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_pump_check/theme/theme.dart';
+import 'package:flutter_pump_check/theme/text_sizes.dart';
 
 class SectionHeader extends StatelessWidget {
   final String title;
@@ -23,27 +24,26 @@ class SectionHeader extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-
         Text(
           title,
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            fontSize: 18,
-            color: colors.gray
+            fontSize: context.textSizes.s18,
+            color: colors.gray,
           ),
         ),
         Row(
           children: [
             if (onAdd != null)
-              IconButton(onPressed: onAdd, icon: const Icon(Icons.add)),
+              IconButton(onPressed: onAdd, icon: Icon(Icons.add)),
             if (onAction != null && actionLabel != null)
               TextButton(
                 onPressed: onAction,
                 child: Text(
                   actionLabel!,
                   style: TextStyle(
-                      color: colors.gray4,
-                      fontWeight: FontWeight.normal
+                    color: colors.gray4,
+                    fontWeight: FontWeight.normal,
                   ),
                 ),
               ),

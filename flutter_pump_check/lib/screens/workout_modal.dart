@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pump_check/theme/app_dimensions.dart';
 import 'package:flutter_pump_check/theme/theme.dart';
 import '../services/workout_service.dart';
 import '../widgets/progress_ring.dart';
+import 'package:flutter_pump_check/theme/text_sizes.dart';
 
 Future<bool> showWorkoutModal(BuildContext context) async {
   double selectedMinutes = 30; // default slider
@@ -21,7 +23,9 @@ Future<bool> showWorkoutModal(BuildContext context) async {
       final theme = Theme.of(ctx);
       return AlertDialog(
         backgroundColor: colors.gray,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(context.dimensions.values.s20),
+        ),
         content: StatefulBuilder(
           builder: (ctx, setState) {
             final progress = goalMinutes > 0 ? todayMinutes / goalMinutes : 0.0;
@@ -30,21 +34,24 @@ Future<bool> showWorkoutModal(BuildContext context) async {
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Progress Ring
-                ProgressRing(progress: progress.clamp(0.0, 1.0), size: 120),
-                const SizedBox(height: 12),
+                ProgressRing(
+                  progress: progress.clamp(0.0, 1.0),
+                  size: context.dimensions.values.s120,
+                ),
+                SizedBox(height: context.dimensions.values.s12),
 
                 // Text labels
                 Text(
                   "$todayMinutes min / $goalMinutes min",
                   style: theme.textTheme.bodySmall,
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: context.dimensions.values.s12),
 
                 // Selected minutes
                 Text(
                   "${selectedMinutes.toStringAsFixed(0)} min",
                   style: theme.textTheme.bodyMedium!.copyWith(
-                    fontSize: 22,
+                    fontSize: context.textSizes.s22,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -59,7 +66,7 @@ Future<bool> showWorkoutModal(BuildContext context) async {
                   onChanged: (v) => setState(() => selectedMinutes = v),
                 ),
 
-                const SizedBox(height: 10),
+                SizedBox(height: context.dimensions.values.s10),
 
                 // Preset buttons
                 Row(
@@ -89,18 +96,20 @@ Future<bool> showWorkoutModal(BuildContext context) async {
                   ],
                 ),
 
-                const SizedBox(height: 16),
+                SizedBox(height: context.dimensions.values.s16),
 
                 // Log button
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.colorScheme.primary,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(
+                        context.dimensions.values.s20,
+                      ),
                     ),
-                    padding: const EdgeInsets.symmetric(
+                    padding: EdgeInsets.symmetric(
                       horizontal: 40,
-                      vertical: 12,
+                      vertical: context.dimensions.values.s12,
                     ),
                   ),
                   onPressed: () async {
@@ -122,7 +131,7 @@ Future<bool> showWorkoutModal(BuildContext context) async {
                       ),
                     );
                   },
-                  child: const Text(
+                  child: Text(
                     "Log Workout",
                     style: TextStyle(color: Colors.white),
                   ),
@@ -131,7 +140,7 @@ Future<bool> showWorkoutModal(BuildContext context) async {
                 // Close button
                 TextButton(
                   onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text("Close"),
+                  child: Text("Close"),
                 ),
               ],
             );
@@ -154,7 +163,9 @@ Widget _presetButton(
   final theme = Theme.of(context);
   return OutlinedButton(
     style: OutlinedButton.styleFrom(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(context.dimensions.values.s20),
+      ),
       side: BorderSide(color: theme.colorScheme.primary.withOpacity(0.3)),
     ),
     onPressed: () => onSelect(minutes),

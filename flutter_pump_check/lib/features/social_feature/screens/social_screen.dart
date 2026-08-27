@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pump_check/theme/app_dimensions.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_pump_check/theme/theme.dart';
 
 import '../../dashboard_feature/widgets/section_header.dart';
+import 'package:flutter_pump_check/theme/text_sizes.dart';
 
 class SocialScreen extends StatefulWidget {
   const SocialScreen({super.key});
@@ -200,7 +202,7 @@ class _SocialScreenState extends State<SocialScreen> {
   Widget _sectionHeader(BuildContext context, String title) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: EdgeInsets.symmetric(vertical: context.dimensions.values.s8),
       child: Text(
         title,
         style: theme.textTheme.titleMedium!.copyWith(
@@ -216,10 +218,10 @@ class _SocialScreenState extends State<SocialScreen> {
     final colors = context.theme.appColors;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Friends & Groups')),
+      appBar: AppBar(title: Text('Friends & Groups')),
       backgroundColor: Colors.transparent,
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(context.dimensions.values.s16),
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -244,7 +246,9 @@ class _SocialScreenState extends State<SocialScreen> {
                       final d = doc.data() as Map<String, dynamic>;
                       return Card(
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(
+                            context.dimensions.values.s12,
+                          ),
                         ),
                         child: ListTile(
                           title: Text(d['groupName'] ?? ''),
@@ -253,17 +257,14 @@ class _SocialScreenState extends State<SocialScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
-                                icon: const Icon(
+                                icon: Icon(
                                   Icons.check_circle,
                                   color: Colors.green,
                                 ),
                                 onPressed: () => acceptInvite(doc),
                               ),
                               IconButton(
-                                icon: const Icon(
-                                  Icons.cancel,
-                                  color: Colors.red,
-                                ),
+                                icon: Icon(Icons.cancel, color: Colors.red),
                                 onPressed: () => declineInvite(doc),
                               ),
                             ],
@@ -275,7 +276,7 @@ class _SocialScreenState extends State<SocialScreen> {
                 },
               ),
 
-              const SizedBox(height: 20),
+              SizedBox(height: context.dimensions.values.s20),
               SectionHeader(title: "Friend Requests"),
               StreamBuilder<QuerySnapshot>(
                 stream: getFriendRequests(),
@@ -296,16 +297,18 @@ class _SocialScreenState extends State<SocialScreen> {
                       final d = doc.data() as Map<String, dynamic>;
                       return Card(
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(
+                            context.dimensions.values.s12,
+                          ),
                         ),
                         child: ListTile(
                           title: Text(d['fromUserName'] ?? ''),
-                          subtitle: const Text('Wants to be friends'),
+                          subtitle: Text('Wants to be friends'),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
-                                icon: const Icon(
+                                icon: Icon(
                                   Icons.check_circle,
                                   color: Colors.green,
                                 ),
@@ -317,10 +320,7 @@ class _SocialScreenState extends State<SocialScreen> {
                                 },
                               ),
                               IconButton(
-                                icon: const Icon(
-                                  Icons.cancel,
-                                  color: Colors.red,
-                                ),
+                                icon: Icon(Icons.cancel, color: Colors.red),
                                 onPressed: () => declineFriendRequest(doc),
                               ),
                             ],
@@ -332,7 +332,7 @@ class _SocialScreenState extends State<SocialScreen> {
                 },
               ),
 
-              const SizedBox(height: 20),
+              SizedBox(height: context.dimensions.values.s20),
 
               SectionHeader(title: "My Friends"),
               StreamBuilder<DocumentSnapshot>(
@@ -365,7 +365,9 @@ class _SocialScreenState extends State<SocialScreen> {
                           return Card(
                             color: colors.gray,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(
+                                context.dimensions.values.s12,
+                              ),
                             ),
                             child: ListTile(
                               leading: fd['photoUrl'] != null
@@ -374,9 +376,7 @@ class _SocialScreenState extends State<SocialScreen> {
                                         fd['photoUrl'],
                                       ),
                                     )
-                                  : const CircleAvatar(
-                                      child: Icon(Icons.person),
-                                    ),
+                                  : CircleAvatar(child: Icon(Icons.person)),
                               title: Text(fd['name'] ?? 'Unknown'),
                               subtitle: Text('@${fd['username'] ?? ''}'),
                             ),
@@ -388,7 +388,7 @@ class _SocialScreenState extends State<SocialScreen> {
                 },
               ),
 
-              const SizedBox(height: 20),
+              SizedBox(height: context.dimensions.values.s20),
 
               SectionHeader(title: "Messages"),
 
@@ -417,10 +417,12 @@ class _SocialScreenState extends State<SocialScreen> {
 
                       return Card(
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(
+                            context.dimensions.values.s12,
+                          ),
                         ),
                         child: ListTile(
-                          leading: const CircleAvatar(child: Icon(Icons.mail)),
+                          leading: CircleAvatar(child: Icon(Icons.mail)),
                           title: Text(data['text'] ?? ''),
                           subtitle: Text("From ${data['from'] ?? ''}"),
                           trailing: Text(
@@ -430,7 +432,10 @@ class _SocialScreenState extends State<SocialScreen> {
                                       .toString()
                                       .substring(0, 16)
                                 : '',
-                            style: TextStyle(fontSize: 12, color: colors.gray),
+                            style: TextStyle(
+                              fontSize: context.textSizes.s12,
+                              color: colors.gray,
+                            ),
                           ),
                         ),
                       );

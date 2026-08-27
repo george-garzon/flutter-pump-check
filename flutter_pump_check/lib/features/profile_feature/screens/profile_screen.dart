@@ -1,12 +1,14 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_pump_check/theme/app_dimensions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_pump_check/theme/theme.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_pump_check/theme/text_sizes.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -142,16 +144,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: const Icon(Icons.camera_alt_outlined),
-                title: const Text('Take photo'),
+                leading: Icon(Icons.camera_alt_outlined),
+                title: Text('Take photo'),
                 onTap: () {
                   Navigator.of(context).pop();
                   _pickProfilePhoto(ImageSource.camera);
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.photo_library_outlined),
-                title: const Text('Choose from camera roll'),
+                leading: Icon(Icons.photo_library_outlined),
+                title: Text('Choose from camera roll'),
                 onTap: () {
                   Navigator.of(context).pop();
                   _pickProfilePhoto(ImageSource.gallery);
@@ -159,8 +161,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               if ((_profilePhotoUrl ?? '').isNotEmpty || _selectedPhoto != null)
                 ListTile(
-                  leading: const Icon(Icons.delete_outline),
-                  title: const Text('Remove current photo'),
+                  leading: Icon(Icons.delete_outline),
+                  title: Text('Remove current photo'),
                   onTap: () {
                     Navigator.of(context).pop();
                     setState(() {
@@ -218,14 +220,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         centerTitle: true,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: EdgeInsets.all(context.dimensions.values.s24),
         child: Column(
           children: [
             // Avatar + Email
             GestureDetector(
               onTap: _showPhotoSourceSheet,
               child: CircleAvatar(
-                radius: 45,
+                radius: context.dimensions.values.s45,
                 backgroundColor: theme.colorScheme.primary.withValues(
                   alpha: 0.2,
                 ),
@@ -234,38 +236,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ? Image.file(
                           _selectedPhoto!,
                           fit: BoxFit.cover,
-                          width: 90,
-                          height: 90,
+                          width: context.dimensions.values.s90,
+                          height: context.dimensions.values.s90,
                         )
                       : photoUrl != null && photoUrl.isNotEmpty
                       ? Image.network(
                           photoUrl,
                           fit: BoxFit.cover,
-                          width: 90,
-                          height: 90,
+                          width: context.dimensions.values.s90,
+                          height: context.dimensions.values.s90,
                           errorBuilder: (context, error, stackTrace) {
                             debugPrint("Image failed to load: $error");
-                            return const Icon(
+                            return Icon(
                               Icons.person,
-                              size: 45,
+                              size: context.dimensions.values.s45,
                               color: Colors.white,
                             );
                           },
                         )
-                      : const Icon(Icons.person, size: 45, color: Colors.white),
+                      : Icon(
+                          Icons.person,
+                          size: context.dimensions.values.s45,
+                          color: Colors.white,
+                        ),
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: context.dimensions.values.s12),
             Text(
               user.email ?? '',
               style: TextStyle(
                 color: colors.gray,
-                fontSize: 14,
+                fontSize: context.textSizes.s14,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: context.dimensions.values.s24),
 
             // Display Name
             TextField(
@@ -274,11 +280,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               decoration: InputDecoration(
                 labelText: 'Display Name',
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(
+                    context.dimensions.values.s16,
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: context.dimensions.values.s16),
 
             // Workout Goal
             TextField(
@@ -288,33 +296,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
               decoration: InputDecoration(
                 labelText: 'Workout Goal (minutes/day)',
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(
+                    context.dimensions.values.s16,
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: context.dimensions.values.s24),
 
             // Save Changes Button
             SizedBox(
               width: double.infinity,
-              height: 48,
+              height: context.dimensions.values.s48,
               child: ElevatedButton(
                 onPressed: _isSaving ? null : _updateProfile,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: colors.gray,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 14,
-                    horizontal: 24,
+                  padding: EdgeInsets.symmetric(
+                    vertical: context.dimensions.values.s14,
+                    horizontal: context.dimensions.values.s24,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(
+                      context.dimensions.values.s16,
+                    ),
                   ),
-                  textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                  textStyle: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 child: _isSaving
                     ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text("Save Changes"),
+                    : Text("Save Changes"),
               ),
             ),
 
@@ -326,16 +338,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.redAccent,
                 foregroundColor: Colors.white, // ✅ white text
-                padding: const EdgeInsets.symmetric(
-                  vertical: 14,
-                  horizontal: 24,
+                padding: EdgeInsets.symmetric(
+                  vertical: context.dimensions.values.s14,
+                  horizontal: context.dimensions.values.s24,
                 ),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(
+                    context.dimensions.values.s16,
+                  ),
                 ),
-                textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                textStyle: TextStyle(fontWeight: FontWeight.bold),
               ),
-              child: const Text("Logout"),
+              child: Text("Logout"),
             ),
           ],
         ),

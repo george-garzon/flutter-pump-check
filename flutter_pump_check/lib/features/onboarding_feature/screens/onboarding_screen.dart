@@ -10,7 +10,9 @@ import 'package:flutter_pump_check/features/onboarding_feature/pages/single_choi
 import 'package:flutter_pump_check/features/onboarding_feature/pages/tracking_mode_page.dart';
 import 'package:flutter_pump_check/features/onboarding_feature/pages/trusted_app_page.dart';
 import 'package:flutter_pump_check/services/onboarding_preferences.dart';
+import 'package:flutter_pump_check/theme/app_dimensions.dart';
 import 'package:flutter_pump_check/theme/claude_palette.dart';
+import 'package:flutter_pump_check/theme/text_sizes.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -220,22 +222,30 @@ class _OnboardingTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final onPaywall = page == pageCount - 1;
+    final dimensions = context.dimensions;
+    final spacing = dimensions.spacing;
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+      padding: EdgeInsets.fromLTRB(
+        spacing.sectionSmall,
+        spacing.lg,
+        spacing.sectionSmall,
+        spacing.sm,
+      ),
       child: Row(
         children: [
           Expanded(
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: BorderRadius.circular(dimensions.radii.pill),
               child: LinearProgressIndicator(
                 value: (page + 1) / pageCount,
-                minHeight: 6,
+                minHeight: dimensions.components.topBarProgressHeight,
                 backgroundColor: ClaudePalette.charcoalSurface,
                 color: ClaudePalette.accent,
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: spacing.lg),
           AnimatedOpacity(
             duration: const Duration(milliseconds: 220),
             opacity: onPaywall && showPaywallClose ? 1 : 0,
@@ -268,6 +278,8 @@ class _OnboardingBottomCta extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dimensions = context.dimensions;
+    final spacing = dimensions.spacing;
     final label = switch (page) {
       0 => 'Get Started',
       8 => 'Continue to trial',
@@ -276,13 +288,18 @@ class _OnboardingBottomCta extends StatelessWidget {
     };
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 22),
+      padding: EdgeInsets.fromLTRB(
+        spacing.sectionSmall,
+        spacing.sm,
+        spacing.sectionSmall,
+        spacing.sectionMedium,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(
             width: double.infinity,
-            height: 54,
+            height: dimensions.components.buttonHeight,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: canContinue
@@ -290,24 +307,27 @@ class _OnboardingBottomCta extends StatelessWidget {
                     : ClaudePalette.charcoalSurface,
                 foregroundColor: ClaudePalette.charcoal,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(dimensions.radii.lg),
                 ),
               ),
               onPressed: canContinue && !saving ? onPressed : null,
               child: Text(
                 label,
-                style: const TextStyle(
-                  fontSize: 17,
+                style: TextStyle(
+                  fontSize: context.textSizes.s17,
                   fontWeight: FontWeight.w900,
                 ),
               ),
             ),
           ),
           if (page == 9) ...[
-            const SizedBox(height: 10),
+            SizedBox(height: spacing.md),
             Text(
               'Restore · Terms · Privacy',
-              style: TextStyle(color: ClaudePalette.mutedText, fontSize: 12),
+              style: TextStyle(
+                color: ClaudePalette.mutedText,
+                fontSize: context.textSizes.s12,
+              ),
             ),
           ],
         ],

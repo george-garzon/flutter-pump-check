@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pump_check/theme/app_dimensions.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -81,7 +82,7 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Edit Workout Goal')),
       body: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(context.dimensions.values.s16),
         child: Column(
           children: [
             TextFormField(
@@ -92,15 +93,19 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
                 border: OutlineInputBorder(),
               ),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: context.dimensions.values.s20),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _isSaving ? null : _saveGoal,
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  padding: EdgeInsets.symmetric(
+                    vertical: context.dimensions.values.s14,
+                  ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(
+                      context.dimensions.values.s16,
+                    ),
                   ),
                 ),
                 child: _isSaving

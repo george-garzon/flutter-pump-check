@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pump_check/theme/app_dimensions.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/friend.dart';
@@ -25,12 +26,14 @@ Future<void> showGroupInviteModal(
           return AlertDialog(
             backgroundColor: theme.colorScheme.surface,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(
+                context.dimensions.values.s16,
+              ),
             ),
             title: const Text("Invite Friends to Group 💌"),
             content: SizedBox(
               width: double.maxFinite,
-              height: 400,
+              height: context.dimensions.values.s400,
               child: ListView(
                 children: allFriends.map((friend) {
                   final normalizedUsername = friend.username.replaceFirst(

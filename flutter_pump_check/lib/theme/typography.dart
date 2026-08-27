@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'text_sizes.dart';
 
 @immutable
 class AppTypography extends ThemeExtension<AppTypography> {
@@ -95,9 +96,9 @@ class AppTypography extends ThemeExtension<AppTypography> {
 
   @override
   ThemeExtension<AppTypography> lerp(
-      covariant ThemeExtension<AppTypography>? other,
-      double t,
-      ) {
+    covariant ThemeExtension<AppTypography>? other,
+    double t,
+  ) {
     if (other is! AppTypography) {
       return this;
     }
@@ -125,96 +126,96 @@ class AppTypography extends ThemeExtension<AppTypography> {
 
   static AppTypography typography = AppTypography(
     displayLarge: GoogleFonts.inter(
-      fontSize: 57,
+      fontSize: AppTextSizeTokens.s57,
       fontWeight: FontWeight.w600,
       height: 1.12,
     ),
     displayMedium: GoogleFonts.inter(
-      fontSize: 45,
+      fontSize: AppTextSizeTokens.s45,
       fontWeight: FontWeight.w400,
       height: 1.16,
     ),
     displaySmall: GoogleFonts.abel(
-      fontSize: 36,
+      fontSize: AppTextSizeTokens.s36,
       fontWeight: FontWeight.w400,
       height: 1.22,
     ),
     headlineLarge: GoogleFonts.inter(
-      fontSize: 32,
+      fontSize: AppTextSizeTokens.s32,
       fontWeight: FontWeight.w600,
       height: 1.25,
     ),
     headlineMedium: GoogleFonts.inter(
-      fontSize: 28,
+      fontSize: AppTextSizeTokens.s28,
       fontWeight: FontWeight.w400,
       height: 1.29,
     ),
     headlineSmall: GoogleFonts.inter(
-      fontSize: 24,
+      fontSize: AppTextSizeTokens.s24,
       fontWeight: FontWeight.w400,
       height: 1.33,
     ),
     titleLarge: GoogleFonts.inter(
-      fontSize: 22,
+      fontSize: AppTextSizeTokens.s22,
       fontWeight: FontWeight.w600,
       height: 1.27,
     ),
     titleMedium: GoogleFonts.inter(
-      fontSize: 16,
+      fontSize: AppTextSizeTokens.s16,
       fontWeight: FontWeight.w500,
       height: 1.5,
       letterSpacing: 0.15,
     ),
     titleSmall: GoogleFonts.inter(
-      fontSize: 14,
+      fontSize: AppTextSizeTokens.s14,
       fontWeight: FontWeight.w500,
       height: 1.43,
       letterSpacing: 0.1,
     ),
     bodyLarge: GoogleFonts.inter(
-      fontSize: 16,
+      fontSize: AppTextSizeTokens.s16,
       fontWeight: FontWeight.w600,
       height: 1.5,
       letterSpacing: 0.5,
     ),
     bodyMedium: GoogleFonts.inter(
-      fontSize: 14,
+      fontSize: AppTextSizeTokens.s14,
       fontWeight: FontWeight.w400,
       height: 1.43,
       letterSpacing: 0.25,
     ),
     bodySmall: GoogleFonts.inter(
-      fontSize: 12,
+      fontSize: AppTextSizeTokens.s12,
       fontWeight: FontWeight.w400,
       height: 1.33,
       letterSpacing: 0.4,
     ),
     labelLarge: GoogleFonts.inter(
-      fontSize: 14,
+      fontSize: AppTextSizeTokens.s14,
       fontWeight: FontWeight.w500,
       height: 1.43,
       letterSpacing: 0.1,
     ),
     labelMedium: GoogleFonts.inter(
-      fontSize: 12,
+      fontSize: AppTextSizeTokens.s12,
       fontWeight: FontWeight.w500,
       height: 1.33,
       letterSpacing: 0.5,
     ),
     labelSmall: GoogleFonts.inter(
-      fontSize: 11,
+      fontSize: AppTextSizeTokens.s11,
       fontWeight: FontWeight.w500,
       height: 1.45,
       letterSpacing: 0.5,
     ),
     button: GoogleFonts.inter(
-      fontSize: 14,
+      fontSize: AppTextSizeTokens.s14,
       fontWeight: FontWeight.w500,
       height: 1.42,
       letterSpacing: 0.1,
     ),
     caption: GoogleFonts.inter(
-      fontSize: 12,
+      fontSize: AppTextSizeTokens.s12,
       fontWeight: FontWeight.w400,
       height: 1.33,
       letterSpacing: 0.4,

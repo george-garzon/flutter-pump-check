@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pump_check/features/onboarding_feature/widgets/onboarding_gaps.dart';
 import 'package:flutter_pump_check/features/onboarding_feature/widgets/onboarding_page_shell.dart';
 import 'package:flutter_pump_check/features/onboarding_feature/widgets/onboarding_text.dart';
+import 'package:flutter_pump_check/theme/app_dimensions.dart';
 import 'package:flutter_pump_check/theme/claude_palette.dart';
+import 'package:flutter_pump_check/theme/text_sizes.dart';
 
 class FocusOnboardingPage extends StatelessWidget {
   const FocusOnboardingPage({
@@ -28,22 +31,24 @@ class FocusOnboardingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final spacing = context.dimensions.spacing;
+
     return OnboardingPageShell(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 22),
+          GapH(spacing.sectionMedium),
           const OnboardingEyebrow('Focus'),
-          const SizedBox(height: 12),
+          GapH(spacing.lg),
           const OnboardingTitle('What should Burn Camp help with first?'),
-          const SizedBox(height: 10),
+          GapH(spacing.md),
           const OnboardingBody(
             'Pick at least one. Your plan summary will reflect these.',
           ),
-          const SizedBox(height: 22),
+          GapH(spacing.sectionMedium),
           Wrap(
-            spacing: 10,
-            runSpacing: 10,
+            spacing: spacing.md,
+            runSpacing: spacing.md,
             children: _options.map((option) {
               final selected = focusAreas.contains(option);
               return FilterChip(
@@ -67,10 +72,13 @@ class FocusOnboardingPage extends StatelessWidget {
               );
             }).toList(),
           ),
-          const SizedBox(height: 28),
+          GapH(spacing.sectionXXLarge),
           Text(
             'Daily calorie goal',
-            style: TextStyle(color: ClaudePalette.mutedText, fontSize: 15),
+            style: TextStyle(
+              color: ClaudePalette.mutedText,
+              fontSize: context.textSizes.s15,
+            ),
           ),
           Slider(
             value: calorieGoal.toDouble(),
@@ -87,9 +95,9 @@ class FocusOnboardingPage extends StatelessWidget {
           Center(
             child: Text(
               '$calorieGoal calories/day',
-              style: const TextStyle(
+              style: TextStyle(
                 color: ClaudePalette.cream,
-                fontSize: 28,
+                fontSize: context.textSizes.s28,
                 fontWeight: FontWeight.w800,
               ),
             ),

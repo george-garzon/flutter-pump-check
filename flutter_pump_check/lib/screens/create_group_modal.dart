@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pump_check/theme/app_dimensions.dart';
 import '../models/group.dart';
+import 'package:flutter_pump_check/theme/text_sizes.dart';
 
 Future<Group?> showCreateGroupModal(BuildContext context) async {
   final theme = Theme.of(context);
@@ -12,50 +14,51 @@ Future<Group?> showCreateGroupModal(BuildContext context) async {
       return Dialog(
         backgroundColor: theme.colorScheme.surface,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(context.dimensions.values.s24),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(context.dimensions.values.s24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-
               // Close button
               Align(
                 alignment: Alignment.topRight,
                 child: IconButton(
-                  icon: const Icon(Icons.close),
+                  icon: Icon(Icons.close),
                   onPressed: () => Navigator.pop(ctx),
                 ),
               ),
 
-              const SizedBox(height: 8),
+              SizedBox(height: context.dimensions.values.s8),
 
               Text(
                 "Create Group",
                 style: theme.textTheme.bodyMedium!.copyWith(
                   fontWeight: FontWeight.bold,
-                  fontSize: 20,
+                  fontSize: context.textSizes.s20,
                 ),
               ),
 
-              const SizedBox(height: 24),
+              SizedBox(height: context.dimensions.values.s24),
 
               TextField(
                 controller: nameController,
                 decoration: InputDecoration(
                   hintText: "Group Name",
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: context.dimensions.values.s16,
+                    vertical: context.dimensions.values.s12,
                   ),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(
+                      context.dimensions.values.s24,
+                    ),
                   ),
                 ),
               ),
 
-              const SizedBox(height: 24),
+              SizedBox(height: context.dimensions.values.s24),
 
               ElevatedButton(
                 onPressed: () {
@@ -71,18 +74,20 @@ Future<Group?> showCreateGroupModal(BuildContext context) async {
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: theme.colorScheme.primary,
-                  padding: const EdgeInsets.symmetric(
+                  padding: EdgeInsets.symmetric(
                     horizontal: 40,
-                    vertical: 14,
+                    vertical: context.dimensions.values.s14,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(
+                      context.dimensions.values.s16,
+                    ),
                   ),
                 ),
-                child: const Text("Create"),
+                child: Text("Create"),
               ),
 
-              const SizedBox(height: 16),
+              SizedBox(height: context.dimensions.values.s16),
             ],
           ),
         ),

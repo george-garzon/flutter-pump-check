@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pump_check/theme/app_dimensions.dart';
 import '../models/friend.dart';
 import '../models/group.dart';
 
@@ -21,9 +22,9 @@ Future<Group?> showCreateGroupDialog(
               controller: nameController,
               decoration: const InputDecoration(labelText: 'Group name'),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: context.dimensions.values.s10),
             SizedBox(
-              height: 250,
+              height: context.dimensions.values.s250,
               child: ListView(
                 shrinkWrap: true,
                 children: friends.map((f) {

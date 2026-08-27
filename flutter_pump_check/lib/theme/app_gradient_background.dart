@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pump_check/theme/app_dimensions.dart';
 
 import 'claude_palette.dart';
 
@@ -33,7 +34,7 @@ class AppGradientBackground extends StatelessWidget {
             top: -150,
             left: -45,
             right: -105,
-            height: 460,
+            height: context.dimensions.values.s460,
             child: IgnorePointer(
               child: DecoratedBox(
                 decoration: BoxDecoration(

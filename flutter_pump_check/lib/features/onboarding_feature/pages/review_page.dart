@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pump_check/features/onboarding_feature/widgets/onboarding_gaps.dart';
 import 'package:flutter_pump_check/features/onboarding_feature/widgets/onboarding_page_shell.dart';
 import 'package:flutter_pump_check/features/onboarding_feature/widgets/onboarding_text.dart';
+import 'package:flutter_pump_check/theme/app_dimensions.dart';
 import 'package:flutter_pump_check/theme/claude_palette.dart';
+import 'package:flutter_pump_check/theme/text_sizes.dart';
 
 class ReviewOnboardingPage extends StatelessWidget {
   const ReviewOnboardingPage({
@@ -21,25 +24,27 @@ class ReviewOnboardingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final spacing = context.dimensions.spacing;
+
     return OnboardingPageShell(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 22),
+          GapH(spacing.sectionMedium),
           const OnboardingEyebrow('Plan ready'),
-          const SizedBox(height: 12),
+          GapH(spacing.lg),
           const OnboardingTitle('Your Burn Camp plan is ready.'),
-          const SizedBox(height: 12),
+          GapH(spacing.lg),
           const OnboardingBody(
             'Based on your answers, we built a simple first-week setup to keep tracking clear and consistent.',
           ),
-          const SizedBox(height: 22),
+          GapH(spacing.sectionMedium),
           _PlanHeroCard(
             trainingDays: trainingDays,
             calorieGoal: calorieGoal,
             trackingMode: trackingMode,
           ),
-          const SizedBox(height: 16),
+          GapH(spacing.xxl),
           ReviewFeatureCard(
             icon: Icons.flag_outlined,
             title: 'Primary goal',
@@ -67,9 +72,9 @@ class ReviewOnboardingPage extends StatelessWidget {
             title: 'Focus areas',
             value: focusAreas.isEmpty ? 'Consistency' : focusAreas.join(', '),
           ),
-          const SizedBox(height: 18),
+          GapH(spacing.xxxl),
           const _ReassuranceCard(),
-          const SizedBox(height: 42),
+          GapH(spacing.pageLarge),
         ],
       ),
     );
@@ -93,50 +98,57 @@ class _PlanHeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dimensions = context.dimensions;
+    final spacing = dimensions.spacing;
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(22),
+      padding: EdgeInsets.all(spacing.sectionMedium),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [ClaudePalette.accent, Color(0xFFD88A24)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(dimensions.radii.cardXLarge),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.verified, color: ClaudePalette.charcoal, size: 28),
-              SizedBox(width: 10),
+              Icon(
+                Icons.verified,
+                color: ClaudePalette.charcoal,
+                size: dimensions.icons.md,
+              ),
+              GapW(spacing.md),
               Text(
                 'Personalized setup',
                 style: TextStyle(
                   color: ClaudePalette.charcoal,
-                  fontSize: 18,
+                  fontSize: context.textSizes.s18,
                   fontWeight: FontWeight.w900,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          GapH(spacing.xxl),
           Text(
             '${trainingDays ?? '3-4 days'} · $calorieGoal calories/day',
-            style: const TextStyle(
+            style: TextStyle(
               color: ClaudePalette.charcoal,
-              fontSize: 28,
+              fontSize: context.textSizes.s28,
               height: 1.05,
               fontWeight: FontWeight.w900,
             ),
           ),
-          const SizedBox(height: 10),
+          GapH(spacing.md),
           Text(
             'Start with ${trackingModeLabel(trackingMode).toLowerCase()} and build from there.',
             style: TextStyle(
               color: ClaudePalette.charcoal.withValues(alpha: 0.75),
-              fontSize: 16,
+              fontSize: context.textSizes.s16,
               fontWeight: FontWeight.w700,
               height: 1.25,
             ),
@@ -161,18 +173,21 @@ class ReviewFeatureCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dimensions = context.dimensions;
+    final spacing = dimensions.spacing;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(16),
+      margin: EdgeInsets.only(bottom: spacing.md),
+      padding: EdgeInsets.all(spacing.xxl),
       decoration: BoxDecoration(
         color: ClaudePalette.charcoalSurface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(dimensions.radii.xl),
         border: Border.all(color: ClaudePalette.charcoalBorder),
       ),
       child: Row(
         children: [
-          Icon(icon, color: ClaudePalette.accent, size: 28),
-          const SizedBox(width: 14),
+          Icon(icon, color: ClaudePalette.accent, size: dimensions.icons.md),
+          GapW(spacing.xl),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,24 +196,28 @@ class ReviewFeatureCard extends StatelessWidget {
                   title,
                   style: TextStyle(
                     color: ClaudePalette.mutedText,
-                    fontSize: 13,
+                    fontSize: context.textSizes.s13,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 4),
+                GapH(spacing.xxs),
                 Text(
                   value,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: ClaudePalette.cream,
-                    fontSize: 17,
+                    fontSize: context.textSizes.s17,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          const Icon(Icons.check_circle, color: ClaudePalette.accent),
+          GapW(spacing.sm),
+          Icon(
+            Icons.check_circle,
+            color: ClaudePalette.accent,
+            size: dimensions.icons.sm,
+          ),
         ],
       ),
     );
@@ -210,23 +229,30 @@ class _ReassuranceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dimensions = context.dimensions;
+    final spacing = dimensions.spacing;
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(spacing.xxl),
       decoration: BoxDecoration(
         color: ClaudePalette.charcoalSurface.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(dimensions.radii.xl),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.settings_outlined, color: ClaudePalette.accent),
-          const SizedBox(width: 12),
+          Icon(
+            Icons.settings_outlined,
+            color: ClaudePalette.accent,
+            size: dimensions.icons.sm,
+          ),
+          GapW(spacing.lg),
           Expanded(
             child: Text(
               'You can reset personalization and switch tracking style anytime from Settings.',
               style: TextStyle(
                 color: ClaudePalette.mutedText,
-                fontSize: 15,
+                fontSize: context.textSizes.s15,
                 height: 1.3,
               ),
             ),

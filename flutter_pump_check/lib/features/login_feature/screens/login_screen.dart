@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pump_check/theme/app_dimensions.dart';
 import '../../../../../../theme/theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../services/auth/auth_provider.dart';
+import 'package:flutter_pump_check/theme/text_sizes.dart';
 
 class LoginScreen extends ConsumerWidget {
   const LoginScreen({super.key});
@@ -14,8 +16,8 @@ class LoginScreen extends ConsumerWidget {
       backgroundColor: Colors.transparent,
       body: Center(
         child: SizedBox(
-          width: 280,
-          height: 54,
+          width: context.dimensions.values.s280,
+          height: context.dimensions.values.s54,
           child: ElevatedButton(
             onPressed: () async {
               try {
@@ -30,13 +32,15 @@ class LoginScreen extends ConsumerWidget {
             style: ElevatedButton.styleFrom(
               backgroundColor: colors.primary,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30),
+                borderRadius: BorderRadius.circular(
+                  context.dimensions.values.s30,
+                ),
               ),
             ),
             child: Text(
               'Sign in to your account',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: context.textSizes.s16,
                 fontWeight: FontWeight.w600,
                 color: colors.gray,
               ),

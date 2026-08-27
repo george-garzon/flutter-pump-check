@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_pump_check/theme/app_dimensions.dart';
 import 'package:flutter/rendering.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_pump_check/features/onboarding_feature/screens/onboarding_screen.dart';
@@ -25,6 +26,7 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_pump_check/theme/text_sizes.dart';
 
 enum MetricPeriod { today, yesterday, week, month }
 
@@ -137,7 +139,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
               leading: Builder(
                 builder: (buttonContext) {
                   return IconButton(
-                    icon: Icon(Icons.ios_share, color: _cream, size: 27),
+                    icon: Icon(
+                      Icons.ios_share,
+                      color: _cream,
+                      size: context.dimensions.values.s27,
+                    ),
                     onPressed: () {
                       _openStatsShareScreen(summaries);
                     },
@@ -145,7 +151,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 },
               ),
               trailing: IconButton(
-                icon: Icon(Icons.add, color: _cream, size: 32),
+                icon: Icon(
+                  Icons.add,
+                  color: _cream,
+                  size: context.dimensions.values.s32,
+                ),
                 onPressed: _showHomeCreateMenu,
               ),
               bottom: _periodTabs(),
@@ -156,13 +166,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: ListView(
                   padding: EdgeInsets.zero,
                   children: [
-                    SizedBox(height: 26),
+                    SizedBox(height: context.dimensions.values.s26),
                     Text(
                       _metricLabel(_period),
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: _cream, fontSize: 20),
+                      style: TextStyle(
+                        color: _cream,
+                        fontSize: context.textSizes.s20,
+                      ),
                     ),
-                    SizedBox(height: 10),
+                    SizedBox(height: context.dimensions.values.s10),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -176,7 +189,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             softWrap: false,
                             style: TextStyle(
                               color: _cream,
-                              fontSize: 68,
+                              fontSize: context.textSizes.s68,
                               fontWeight: FontWeight.w300,
                               height: 0.95,
                             ),
@@ -186,33 +199,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           icon: Icon(
                             Icons.chevron_right,
                             color: _muted,
-                            size: 44,
+                            size: context.dimensions.values.s44,
                           ),
                           onPressed: () => setState(() => _selectedIndex = 1),
                         ),
                       ],
                     ),
-                    SizedBox(height: 10),
+                    SizedBox(height: context.dimensions.values.s10),
                     Text(
                       _minutesLabel(aggregate, _period),
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: _cream, fontSize: 20),
+                      style: TextStyle(
+                        color: _cream,
+                        fontSize: context.textSizes.s20,
+                      ),
                     ),
-                    SizedBox(height: 28),
+                    SizedBox(height: context.dimensions.values.s28),
                     _leaderboardToggle(),
-                    SizedBox(height: 18),
+                    SizedBox(height: context.dimensions.values.s18),
                     _leaderboard(aggregate),
-                    SizedBox(height: 30),
+                    SizedBox(height: context.dimensions.values.s30),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 22),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: context.dimensions.values.s22,
+                      ),
                       child: SizedBox(
-                        height: 56,
+                        height: context.dimensions.values.s56,
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: _accent,
                             foregroundColor: _onAccent,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(
+                                context.dimensions.values.s14,
+                              ),
                             ),
                           ),
                           onPressed: _showAddWorkoutSheet,
@@ -220,12 +240,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             aggregate.calories == 0
                                 ? 'Add today’s workout'
                                 : 'Add another workout',
-                            style: TextStyle(fontSize: 20),
+                            style: TextStyle(fontSize: context.textSizes.s20),
                           ),
                         ),
                       ),
                     ),
-                    SizedBox(height: 28),
+                    SizedBox(height: context.dimensions.values.s28),
                   ],
                 ),
               ),
@@ -249,7 +269,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             _topHeader(
               title: 'History',
-              leading: SizedBox(width: 48),
+              leading: SizedBox(width: context.dimensions.values.s48),
               trailing: IconButton(
                 tooltip: _historyShowsAverage
                     ? 'Show total calories'
@@ -259,14 +279,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ? Icons.bar_chart
                       : Icons.format_list_numbered,
                   color: _cream,
-                  size: 30,
+                  size: context.dimensions.values.s30,
                 ),
                 onPressed: () {
                   setState(() => _historyShowsAverage = !_historyShowsAverage);
                 },
               ),
               bottom: Padding(
-                padding: const EdgeInsets.fromLTRB(22, 12, 22, 0),
+                padding: EdgeInsets.fromLTRB(
+                  context.dimensions.values.s22,
+                  context.dimensions.values.s12,
+                  context.dimensions.values.s22,
+                  context.dimensions.values.s0,
+                ),
                 child: Column(
                   children: [
                     _summaryLine(
@@ -279,7 +304,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     _summaryLine('Longest streak:', '$longestStreak days'),
                     _summaryLine('Best week:', bestWeek),
                     _summaryLine('Best month:', bestMonth),
-                    SizedBox(height: 12),
+                    SizedBox(height: context.dimensions.values.s12),
                     _historyTabs(),
                   ],
                 ),
@@ -297,14 +322,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
       children: [
         _topHeader(
           title: 'Chats',
-          leading: SizedBox(width: 48),
+          leading: SizedBox(width: context.dimensions.values.s48),
           trailing: IconButton(
-            icon: Icon(Icons.person_add_alt, color: _cream, size: 28),
+            icon: Icon(
+              Icons.person_add_alt,
+              color: _cream,
+              size: context.dimensions.values.s28,
+            ),
             onPressed: _showAddFriendSheet,
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(22, 18, 22, 0),
+          padding: EdgeInsets.fromLTRB(
+            context.dimensions.values.s22,
+            context.dimensions.values.s18,
+            context.dimensions.values.s22,
+            context.dimensions.values.s0,
+          ),
           child: Row(
             children: [
               Expanded(
@@ -316,14 +350,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   onSubmitted: (_) => _sendFriendRequest(),
                 ),
               ),
-              SizedBox(width: 10),
+              SizedBox(width: context.dimensions.values.s10),
               IconButton.filled(
                 style: IconButton.styleFrom(
                   backgroundColor: _accent,
                   foregroundColor: _onAccent,
                 ),
                 onPressed: _sendFriendRequest,
-                icon: const Icon(Icons.send),
+                icon: Icon(Icons.send),
               ),
             ],
           ),
@@ -340,8 +374,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     threads.isEmpty) {
                   return ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    children: const [
-                      SizedBox(height: 160),
+                    children: [
+                      SizedBox(height: context.dimensions.values.s160),
                       Center(child: CircularProgressIndicator()),
                     ],
                   );
@@ -358,7 +392,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                 return ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(22, 18, 22, 22),
+                  padding: EdgeInsets.fromLTRB(
+                    context.dimensions.values.s22,
+                    context.dimensions.values.s18,
+                    context.dimensions.values.s22,
+                    context.dimensions.values.s22,
+                  ),
                   children: threads.map(_conversationTile).toList(),
                 );
               },
@@ -376,11 +415,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
       children: [
         _topHeader(
           title: 'Alerts',
-          leading: SizedBox(width: 48),
+          leading: SizedBox(width: context.dimensions.values.s48),
           trailing: Builder(
             builder: (buttonContext) {
               return IconButton(
-                icon: Icon(Icons.ios_share, color: _cream, size: 27),
+                icon: Icon(
+                  Icons.ios_share,
+                  color: _cream,
+                  size: context.dimensions.values.s27,
+                ),
                 onPressed: () {
                   _shareText(
                     buttonContext,
@@ -420,7 +463,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       final summaries = summarySnapshot.data ?? [];
 
                       return ListView(
-                        padding: const EdgeInsets.fromLTRB(22, 24, 22, 22),
+                        padding: EdgeInsets.fromLTRB(
+                          context.dimensions.values.s22,
+                          context.dimensions.values.s24,
+                          context.dimensions.values.s22,
+                          context.dimensions.values.s22,
+                        ),
                         children: _alertItems(
                           summaries,
                           invites,
@@ -507,18 +555,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
         recipientName: thread.otherName,
       ),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 18),
+        padding: EdgeInsets.symmetric(vertical: context.dimensions.values.s18),
         decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: _divider)),
         ),
         child: Row(
           children: [
             CircleAvatar(
-              radius: 24,
+              radius: context.dimensions.values.s24,
               backgroundColor: _accent,
               child: Icon(Icons.chat_bubble_outline, color: _background),
             ),
-            SizedBox(width: 16),
+            SizedBox(width: context.dimensions.values.s16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -529,24 +577,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: _cream,
-                      fontSize: 19,
+                      fontSize: context.textSizes.s19,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  SizedBox(height: 5),
+                  SizedBox(height: context.dimensions.values.s5),
                   Text(
                     thread.lastText,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: _muted, fontSize: 15),
+                    style: TextStyle(
+                      color: _muted,
+                      fontSize: context.textSizes.s15,
+                    ),
                   ),
                 ],
               ),
             ),
-            SizedBox(width: 12),
+            SizedBox(width: context.dimensions.values.s12),
             Text(
               _messageTimeLabel(thread.lastAt),
-              style: TextStyle(color: _muted, fontSize: 12),
+              style: TextStyle(color: _muted, fontSize: context.textSizes.s12),
             ),
           ],
         ),
@@ -570,8 +621,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: _background,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(context.dimensions.values.s22),
+        ),
       ),
       builder: (context) {
         return SizedBox(
@@ -580,9 +633,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             top: false,
             child: Padding(
               padding: EdgeInsets.only(
-                left: 22,
-                right: 22,
-                top: 18,
+                left: context.dimensions.values.s22,
+                right: context.dimensions.values.s22,
+                top: context.dimensions.values.s18,
                 bottom: MediaQuery.of(context).viewInsets.bottom + 18,
               ),
               child: Column(
@@ -595,7 +648,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           recipientName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: _cream, fontSize: 22),
+                          style: TextStyle(
+                            color: _cream,
+                            fontSize: context.textSizes.s22,
+                          ),
                         ),
                       ),
                       IconButton(
@@ -604,7 +660,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ],
                   ),
-                  SizedBox(height: 8),
+                  SizedBox(height: context.dimensions.values.s8),
                   Expanded(
                     child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                       stream: FirebaseFirestore.instance
@@ -624,7 +680,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             child: Text(
                               'Send a preset message to start the conversation.',
                               textAlign: TextAlign.center,
-                              style: TextStyle(color: _muted, fontSize: 16),
+                              style: TextStyle(
+                                color: _muted,
+                                fontSize: context.textSizes.s16,
+                              ),
                             ),
                           );
                         }
@@ -638,10 +697,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   ? Alignment.centerRight
                                   : Alignment.centerLeft,
                               child: Container(
-                                margin: const EdgeInsets.only(bottom: 10),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 11,
+                                margin: EdgeInsets.only(
+                                  bottom: context.dimensions.values.s10,
+                                ),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: context.dimensions.values.s14,
+                                  vertical: context.dimensions.values.s11,
                                 ),
                                 constraints: BoxConstraints(
                                   maxWidth:
@@ -649,13 +710,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                                 decoration: BoxDecoration(
                                   color: isMine ? _accent : _selectedSurface,
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(
+                                    context.dimensions.values.s16,
+                                  ),
                                 ),
                                 child: Text(
                                   (data['text'] as String?) ?? '',
                                   style: TextStyle(
                                     color: isMine ? _onAccent : _cream,
-                                    fontSize: 16,
+                                    fontSize: context.textSizes.s16,
                                   ),
                                 ),
                               ),
@@ -665,15 +728,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       },
                     ),
                   ),
-                  SizedBox(height: 12),
+                  SizedBox(height: context.dimensions.values.s12),
                   Text(
                     'Preset messages only',
-                    style: TextStyle(color: _muted, fontSize: 13),
+                    style: TextStyle(
+                      color: _muted,
+                      fontSize: context.textSizes.s13,
+                    ),
                   ),
-                  SizedBox(height: 8),
+                  SizedBox(height: context.dimensions.values.s8),
                   Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
+                    spacing: context.dimensions.values.s8,
+                    runSpacing: context.dimensions.values.s8,
                     children: preset_messages.messages.map((message) {
                       return ActionChip(
                         backgroundColor: _selectedSurface,
@@ -761,13 +827,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (items.isNotEmpty) return items;
 
       return [
-        SizedBox(height: 160),
-        Icon(Icons.notifications_none, color: _muted, size: 70),
-        SizedBox(height: 18),
+        SizedBox(height: context.dimensions.values.s160),
+        Icon(
+          Icons.notifications_none,
+          color: _muted,
+          size: context.dimensions.values.s70,
+        ),
+        SizedBox(height: context.dimensions.values.s18),
         Text(
           'Your friend requests, group invites, workout recaps, goal streaks, and calorie trends will show up here.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: _muted, fontSize: 19),
+          style: TextStyle(color: _muted, fontSize: context.textSizes.s19),
         ),
       ];
     }
@@ -810,7 +880,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final fromName = (data['fromUserName'] as String?) ?? 'Someone';
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 22),
+      padding: EdgeInsets.symmetric(vertical: context.dimensions.values.s22),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: _divider)),
       ),
@@ -818,25 +888,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(
-            radius: 23,
+            radius: context.dimensions.values.s23,
             backgroundColor: _accent,
-            child: Icon(Icons.person_add_alt, color: _background, size: 24),
+            child: Icon(
+              Icons.person_add_alt,
+              color: _background,
+              size: context.dimensions.values.s24,
+            ),
           ),
-          SizedBox(width: 18),
+          SizedBox(width: context.dimensions.values.s18),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   '$fromName sent you a friend request.',
-                  style: TextStyle(color: _cream, fontSize: 20, height: 1.2),
+                  style: TextStyle(
+                    color: _cream,
+                    fontSize: context.textSizes.s20,
+                    height: 1.2,
+                  ),
                 ),
-                SizedBox(height: 8),
+                SizedBox(height: context.dimensions.values.s8),
                 Text(
                   'Friend request',
-                  style: TextStyle(color: _muted, fontSize: 14),
+                  style: TextStyle(
+                    color: _muted,
+                    fontSize: context.textSizes.s14,
+                  ),
                 ),
-                SizedBox(height: 14),
+                SizedBox(height: context.dimensions.values.s14),
                 Row(
                   children: [
                     Expanded(
@@ -849,7 +930,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: Text('Decline'),
                       ),
                     ),
-                    SizedBox(width: 10),
+                    SizedBox(width: context.dimensions.values.s10),
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
@@ -878,7 +959,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final fromName = (data['fromUserName'] as String?) ?? 'Someone';
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 22),
+      padding: EdgeInsets.symmetric(vertical: context.dimensions.values.s22),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: _divider)),
       ),
@@ -886,25 +967,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(
-            radius: 23,
+            radius: context.dimensions.values.s23,
             backgroundColor: _accent,
-            child: Icon(Icons.group_add, color: _background, size: 24),
+            child: Icon(
+              Icons.group_add,
+              color: _background,
+              size: context.dimensions.values.s24,
+            ),
           ),
-          SizedBox(width: 18),
+          SizedBox(width: context.dimensions.values.s18),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   '$fromName invited you to $groupName.',
-                  style: TextStyle(color: _cream, fontSize: 20, height: 1.2),
+                  style: TextStyle(
+                    color: _cream,
+                    fontSize: context.textSizes.s20,
+                    height: 1.2,
+                  ),
                 ),
-                SizedBox(height: 8),
+                SizedBox(height: context.dimensions.values.s8),
                 Text(
                   'Group invite',
-                  style: TextStyle(color: _muted, fontSize: 14),
+                  style: TextStyle(
+                    color: _muted,
+                    fontSize: context.textSizes.s14,
+                  ),
                 ),
-                SizedBox(height: 14),
+                SizedBox(height: context.dimensions.values.s14),
                 Row(
                   children: [
                     Expanded(
@@ -917,7 +1009,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: Text('Decline'),
                       ),
                     ),
-                    SizedBox(width: 10),
+                    SizedBox(width: context.dimensions.values.s10),
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
@@ -940,25 +1032,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _alertTile(String message, String dateLabel) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 22),
+      padding: EdgeInsets.symmetric(vertical: context.dimensions.values.s22),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: _divider)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.show_chart, color: _accent, size: 44),
-          SizedBox(width: 22),
+          Icon(
+            Icons.show_chart,
+            color: _accent,
+            size: context.dimensions.values.s44,
+          ),
+          SizedBox(width: context.dimensions.values.s22),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   message,
-                  style: TextStyle(color: _cream, fontSize: 20, height: 1.2),
+                  style: TextStyle(
+                    color: _cream,
+                    fontSize: context.textSizes.s20,
+                    height: 1.2,
+                  ),
                 ),
-                SizedBox(height: 8),
-                Text(dateLabel, style: TextStyle(color: _muted, fontSize: 14)),
+                SizedBox(height: context.dimensions.values.s8),
+                Text(
+                  dateLabel,
+                  style: TextStyle(
+                    color: _muted,
+                    fontSize: context.textSizes.s14,
+                  ),
+                ),
               ],
             ),
           ),
@@ -1013,8 +1119,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: _background,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(context.dimensions.values.s22),
+        ),
       ),
       builder: (sheetContext) {
         var sending = false;
@@ -1036,9 +1144,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
             return Padding(
               padding: EdgeInsets.only(
-                left: 24,
-                right: 24,
-                top: 18,
+                left: context.dimensions.values.s24,
+                right: context.dimensions.values.s24,
+                top: context.dimensions.values.s18,
                 bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 28,
               ),
               child: SafeArea(
@@ -1049,16 +1157,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     Text(
                       'Add friend',
-                      style: TextStyle(color: _cream, fontSize: 22),
+                      style: TextStyle(
+                        color: _cream,
+                        fontSize: context.textSizes.s22,
+                      ),
                     ),
-                    SizedBox(height: 8),
+                    SizedBox(height: context.dimensions.values.s8),
                     Text(
                       _user == null
                           ? 'Sign in to send friend requests, or share Burn Camp with someone.'
                           : 'Enter a Burn Camp username to send a friend request.',
-                      style: TextStyle(color: _muted, fontSize: 15),
+                      style: TextStyle(
+                        color: _muted,
+                        fontSize: context.textSizes.s15,
+                      ),
                     ),
-                    SizedBox(height: 16),
+                    SizedBox(height: context.dimensions.values.s16),
                     TextField(
                       controller: controller,
                       enabled: _user != null && !sending,
@@ -1068,7 +1182,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       textInputAction: TextInputAction.send,
                       onSubmitted: (_) => send(),
                     ),
-                    SizedBox(height: 16),
+                    SizedBox(height: context.dimensions.values.s16),
                     if (_user == null)
                       _primarySheetButton(
                         label: 'Sign in to add friends',
@@ -1079,19 +1193,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         label: sending ? 'Sending...' : 'Send friend request',
                         onPressed: sending ? () {} : send,
                       ),
-                    SizedBox(height: 10),
+                    SizedBox(height: context.dimensions.values.s10),
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: _cream,
                         side: BorderSide(color: _divider),
-                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        padding: EdgeInsets.symmetric(
+                          vertical: context.dimensions.values.s13,
+                        ),
                       ),
                       onPressed: () => _shareText(
                         sheetContext,
                         'Join me on Burn Camp — track calories burned, training minutes, and compare workouts with friends.',
                       ),
-                      icon: const Icon(Icons.ios_share),
-                      label: const Text('Share invite'),
+                      icon: Icon(Icons.ios_share),
+                      label: Text('Share invite'),
                     ),
                   ],
                 ),
@@ -1107,20 +1223,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: _background,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(context.dimensions.values.s22),
+        ),
       ),
       builder: (sheetContext) {
         return SafeArea(
           top: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
+            padding: EdgeInsets.fromLTRB(
+              context.dimensions.values.s24,
+              context.dimensions.values.s18,
+              context.dimensions.values.s24,
+              context.dimensions.values.s28,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('Create', style: TextStyle(color: _cream, fontSize: 22)),
-                SizedBox(height: 16),
+                Text(
+                  'Create',
+                  style: TextStyle(
+                    color: _cream,
+                    fontSize: context.textSizes.s22,
+                  ),
+                ),
+                SizedBox(height: context.dimensions.values.s16),
                 _homeCreateOption(
                   icon: Icons.person_add_alt,
                   title: 'Add friend',
@@ -1130,7 +1259,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     _showAddFriendSheet();
                   },
                 ),
-                SizedBox(height: 12),
+                SizedBox(height: context.dimensions.values.s12),
                 _homeCreateOption(
                   icon: Icons.group_add_outlined,
                   title: 'Create group',
@@ -1156,22 +1285,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(context.dimensions.values.s18),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(context.dimensions.values.s16),
         decoration: BoxDecoration(
           color: _surface,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(context.dimensions.values.s18),
           border: Border.all(color: _divider),
         ),
         child: Row(
           children: [
             CircleAvatar(
-              radius: 22,
+              radius: context.dimensions.values.s22,
               backgroundColor: _accent,
-              child: Icon(icon, color: _background, size: 24),
+              child: Icon(
+                icon,
+                color: _background,
+                size: context.dimensions.values.s24,
+              ),
             ),
-            SizedBox(width: 14),
+            SizedBox(width: context.dimensions.values.s14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1180,16 +1313,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     title,
                     style: TextStyle(
                       color: _cream,
-                      fontSize: 17,
+                      fontSize: context.textSizes.s17,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  SizedBox(height: 4),
-                  Text(subtitle, style: TextStyle(color: _muted, fontSize: 14)),
+                  SizedBox(height: context.dimensions.values.s4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: _muted,
+                      fontSize: context.textSizes.s14,
+                    ),
+                  ),
                 ],
               ),
             ),
-            SizedBox(width: 10),
+            SizedBox(width: context.dimensions.values.s10),
             Icon(Icons.chevron_right, color: _muted),
           ],
         ),
@@ -1430,14 +1569,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               _topHeader(
                 title: 'Settings',
-                leading: const SizedBox(width: 48),
-                trailing: const SizedBox(width: 48),
+                leading: SizedBox(width: context.dimensions.values.s48),
+                trailing: SizedBox(width: context.dimensions.values.s48),
               ),
               Expanded(
                 child: ListView(
                   padding: EdgeInsets.zero,
                   children: [
-                    const SizedBox(height: 32),
+                    SizedBox(height: context.dimensions.values.s32),
                     _settingsRow(
                       'Workout tracking',
                       _workoutTrackingModeLabel(workoutTrackingMode),
@@ -1469,7 +1608,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       notificationsEnabled ? 'On' : 'Off',
                       onTap: () => _toggleNotifications(notificationsEnabled),
                     ),
-                    SizedBox(height: 28, child: ColoredBox(color: _surface)),
+                    SizedBox(
+                      height: context.dimensions.values.s28,
+                      child: ColoredBox(color: _surface),
+                    ),
                     _settingsRow(
                       'Account',
                       'Save to email',
@@ -1496,7 +1638,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       '',
                       onTap: _showManageGroupsPage,
                     ),
-                    SizedBox(height: 28, child: ColoredBox(color: _surface)),
+                    SizedBox(
+                      height: context.dimensions.values.s28,
+                      child: ColoredBox(color: _surface),
+                    ),
                     _settingsRow('Help and feedback', '', onTap: _showHelpPage),
                     _settingsRow(
                       'Support Burn Camp',
@@ -1515,7 +1660,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       onTap: () =>
                           _showSnack('Social links are placeholders for now.'),
                     ),
-                    SizedBox(height: 28, child: ColoredBox(color: _surface)),
+                    SizedBox(
+                      height: context.dimensions.values.s28,
+                      child: ColoredBox(color: _surface),
+                    ),
                     _settingsRow(
                       'Privacy',
                       '',
@@ -1534,7 +1682,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             'Burn Camp is for personal fitness tracking and friendly accountability. Manually entered workouts should reflect your best estimate.',
                       ),
                     ),
-                    SizedBox(height: 22),
+                    SizedBox(height: context.dimensions.values.s22),
                   ],
                 ),
               ),
@@ -1567,14 +1715,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             _topHeader(
               title: 'Settings',
-              leading: const SizedBox(width: 48),
-              trailing: const SizedBox(width: 48),
+              leading: SizedBox(width: context.dimensions.values.s48),
+              trailing: SizedBox(width: context.dimensions.values.s48),
             ),
             Expanded(
               child: ListView(
                 padding: EdgeInsets.zero,
                 children: [
-                  const SizedBox(height: 32),
+                  SizedBox(height: context.dimensions.values.s32),
                   _settingsRow(
                     'Workout tracking',
                     _workoutTrackingModeLabel(workoutTrackingMode),
@@ -1605,7 +1753,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     notificationsEnabled ? 'On' : 'Off',
                     onTap: () => _toggleNotifications(notificationsEnabled),
                   ),
-                  SizedBox(height: 28, child: ColoredBox(color: _surface)),
+                  SizedBox(
+                    height: context.dimensions.values.s28,
+                    child: ColoredBox(color: _surface),
+                  ),
                   _settingsRow(
                     'Update profile',
                     name?.isNotEmpty == true ? name! : 'Profile',
@@ -1641,7 +1792,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     '',
                     onTap: _showManageGroupsPage,
                   ),
-                  SizedBox(height: 28, child: ColoredBox(color: _surface)),
+                  SizedBox(
+                    height: context.dimensions.values.s28,
+                    child: ColoredBox(color: _surface),
+                  ),
                   _settingsRow('Help and feedback', '', onTap: _showHelpPage),
                   _settingsRow(
                     'Support Burn Camp',
@@ -1660,7 +1814,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onTap: () =>
                         _showSnack('Social links are placeholders for now.'),
                   ),
-                  SizedBox(height: 28, child: ColoredBox(color: _surface)),
+                  SizedBox(
+                    height: context.dimensions.values.s28,
+                    child: ColoredBox(color: _surface),
+                  ),
                   _settingsRow(
                     'Privacy',
                     '',
@@ -1679,23 +1836,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           'Burn Camp is for personal fitness tracking and friendly accountability. Manually entered workouts should reflect your best estimate.',
                     ),
                   ),
-                  SizedBox(height: 22),
+                  SizedBox(height: context.dimensions.values.s22),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 22),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: context.dimensions.values.s22,
+                    ),
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: _cream,
                         side: BorderSide(color: _divider),
-                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        padding: EdgeInsets.symmetric(
+                          vertical: context.dimensions.values.s13,
+                        ),
                       ),
                       onPressed: _logout,
                       child: Text(
                         'Sign out of Google',
-                        style: TextStyle(fontSize: 16),
+                        style: TextStyle(fontSize: context.textSizes.s16),
                       ),
                     ),
                   ),
-                  SizedBox(height: 22),
+                  SizedBox(height: context.dimensions.values.s22),
                 ],
               ),
             ),
@@ -1735,11 +1896,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       tabs: tabs,
       selectedValue: _period,
       onSelected: (period) => setState(() => _period = period),
-      height: 54,
+      height: context.dimensions.values.s54,
       foreground: _cream,
       selectedBackground: _selectedSurface,
       tabMargin: EdgeInsets.zero,
-      tabPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+      tabPadding: EdgeInsets.symmetric(
+        horizontal: context.dimensions.values.s4,
+        vertical: context.dimensions.values.s6,
+      ),
     );
   }
 
@@ -1750,14 +1914,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
       DashboardSegmentTab.text(value: HistoryRange.month, label: 'Month'),
       DashboardSegmentTab(
         value: HistoryRange.calendar,
-        child: FaIcon(FontAwesomeIcons.calendar, size: 18),
+        child: FaIcon(
+          FontAwesomeIcons.calendar,
+          size: context.dimensions.values.s18,
+        ),
       ),
     ];
     return DashboardSegmentedTabs<HistoryRange>(
       tabs: tabs,
       selectedValue: _historyRange,
       onSelected: (range) => setState(() => _historyRange = range),
-      height: 46,
+      height: context.dimensions.values.s46,
       foreground: _cream,
       selectedBackground: _selectedSurface,
     );
@@ -1771,7 +1938,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Text(
           'No workouts logged yet.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: _muted, fontSize: 17),
+          style: TextStyle(color: _muted, fontSize: context.textSizes.s17),
         ),
       );
     }
@@ -1806,7 +1973,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(22, 18, 22, 22),
+      padding: EdgeInsets.fromLTRB(
+        context.dimensions.values.s22,
+        context.dimensions.values.s18,
+        context.dimensions.values.s22,
+        context.dimensions.values.s22,
+      ),
       children: _dayHistoryRows(months, summariesByMondayWeek, now, scaleValue),
     );
   }
@@ -1829,7 +2001,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(22, 18, 22, 22),
+      padding: EdgeInsets.fromLTRB(
+        context.dimensions.values.s22,
+        context.dimensions.values.s18,
+        context.dimensions.values.s22,
+        context.dimensions.values.s22,
+      ),
       children: _weekHistoryRows(
         months,
         summariesByMondayWeek,
@@ -1866,12 +2043,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
         )
-        ..add(SizedBox(height: 14));
+        ..add(SizedBox(height: context.dimensions.values.s14));
 
       if (mondayWeeks.isEmpty) {
         rows
-          ..add(Text('No data', style: TextStyle(color: _muted, fontSize: 18)))
-          ..add(const SizedBox(height: 18));
+          ..add(
+            Text(
+              'No data',
+              style: TextStyle(color: _muted, fontSize: context.textSizes.s18),
+            ),
+          )
+          ..add(SizedBox(height: context.dimensions.values.s18));
         continue;
       }
 
@@ -1894,24 +2076,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
           )
-          ..add(SizedBox(height: 12));
+          ..add(SizedBox(height: context.dimensions.values.s12));
 
         if (weekSummaries.isEmpty) {
           rows
             ..add(
-              Text('No data', style: TextStyle(color: _muted, fontSize: 18)),
+              Text(
+                'No data',
+                style: TextStyle(
+                  color: _muted,
+                  fontSize: context.textSizes.s18,
+                ),
+              ),
             )
-            ..add(const SizedBox(height: 14));
+            ..add(SizedBox(height: context.dimensions.values.s14));
         } else {
           rows
             ..addAll(
               weekSummaries.map((summary) => _historyBar(summary, scaleValue)),
             )
-            ..add(const SizedBox(height: 14));
+            ..add(SizedBox(height: context.dimensions.values.s14));
         }
       }
 
-      rows.add(const SizedBox(height: 18));
+      rows.add(SizedBox(height: context.dimensions.values.s18));
     }
 
     return rows;
@@ -1944,12 +2132,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
         )
-        ..add(SizedBox(height: 14));
+        ..add(SizedBox(height: context.dimensions.values.s14));
 
       if (mondayWeeks.isEmpty) {
         rows
-          ..add(Text('No data', style: TextStyle(color: _muted, fontSize: 18)))
-          ..add(const SizedBox(height: 18));
+          ..add(
+            Text(
+              'No data',
+              style: TextStyle(color: _muted, fontSize: context.textSizes.s18),
+            ),
+          )
+          ..add(SizedBox(height: context.dimensions.values.s18));
         continue;
       }
 
@@ -1958,10 +2151,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ..add(
             _weekBar(week, summariesByMondayWeek[week] ?? const [], scaleValue),
           )
-          ..add(const SizedBox(height: 14));
+          ..add(SizedBox(height: context.dimensions.values.s14));
       }
 
-      rows.add(const SizedBox(height: 18));
+      rows.add(SizedBox(height: context.dimensions.values.s18));
     }
 
     return rows;
@@ -1984,7 +2177,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       groups.values.map(_historyValueForSummaries),
     );
     return ListView(
-      padding: const EdgeInsets.fromLTRB(22, 18, 22, 22),
+      padding: EdgeInsets.fromLTRB(
+        context.dimensions.values.s22,
+        context.dimensions.values.s18,
+        context.dimensions.values.s22,
+        context.dimensions.values.s22,
+      ),
       children: _monthHistoryRows(allMonths, groups, scaleValue),
     );
   }
@@ -2014,7 +2212,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
           )
-          ..add(const SizedBox(height: 14));
+          ..add(SizedBox(height: context.dimensions.values.s14));
       }
 
       rows.add(
@@ -2045,11 +2243,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ];
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(22, 18, 22, 22),
+      padding: EdgeInsets.fromLTRB(
+        context.dimensions.values.s22,
+        context.dimensions.values.s18,
+        context.dimensions.values.s22,
+        context.dimensions.values.s22,
+      ),
       children: [
         for (final month in months) ...[
           _calendarMonth(month, byDate),
-          SizedBox(height: 30),
+          SizedBox(height: context.dimensions.values.s30),
         ],
       ],
     );
@@ -2059,8 +2262,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(color: _cream, fontSize: 23)),
-        Text(value, style: TextStyle(color: _muted, fontSize: 18)),
+        Text(
+          label,
+          style: TextStyle(color: _cream, fontSize: context.textSizes.s23),
+        ),
+        Text(
+          value,
+          style: TextStyle(color: _muted, fontSize: context.textSizes.s18),
+        ),
       ],
     );
   }
@@ -2127,28 +2336,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required bool hasData,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
+      padding: EdgeInsets.only(bottom: context.dimensions.values.s20),
       child: Row(
         children: [
           SizedBox(
-            width: 76,
-            child: Text(label, style: TextStyle(color: _muted, fontSize: 18)),
+            width: context.dimensions.values.s76,
+            child: Text(
+              label,
+              style: TextStyle(color: _muted, fontSize: context.textSizes.s18),
+            ),
           ),
           Expanded(
             child: !hasData
-                ? Text(valueText, style: TextStyle(color: _muted, fontSize: 18))
+                ? Text(
+                    valueText,
+                    style: TextStyle(
+                      color: _muted,
+                      fontSize: context.textSizes.s18,
+                    ),
+                  )
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _historyValueBar(
                         valueText: valueText,
                         widthFactor: widthFactor,
-                        fontSize: 18,
+                        fontSize: context.textSizes.s18,
                       ),
-                      SizedBox(height: 4),
+                      SizedBox(height: context.dimensions.values.s4),
                       Text(
                         subtitle,
-                        style: TextStyle(color: _muted, fontSize: 13),
+                        style: TextStyle(
+                          color: _muted,
+                          fontSize: context.textSizes.s13,
+                        ),
                       ),
                     ],
                   ),
@@ -2179,12 +2400,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         return Container(
           width: barWidth,
-          height: 42,
+          height: context.dimensions.values.s42,
           alignment: Alignment.centerLeft,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: EdgeInsets.symmetric(
+            horizontal: context.dimensions.values.s12,
+          ),
           decoration: BoxDecoration(
             color: _accent,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(context.dimensions.values.s8),
           ),
           child: Text(
             valueText,
@@ -2230,7 +2453,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             compact: true,
           ),
         ),
-        const SizedBox(height: 14),
+        SizedBox(height: context.dimensions.values.s14),
         const Row(
           children: [
             _WeekdayLabel('M'),
@@ -2242,17 +2465,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _WeekdayLabel('S'),
           ],
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: context.dimensions.values.s8),
         GridView.count(
           crossAxisCount: 7,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           childAspectRatio: 0.95,
           children: [
-            for (var i = 0; i < leadingBlanks; i++) const SizedBox.shrink(),
+            for (var i = 0; i < leadingBlanks; i++) SizedBox.shrink(),
             for (var day = 1; day <= daysInMonth; day++)
               _calendarDay(DateTime(month.year, month.month, day), byDate),
-            for (var i = 0; i < trailingBlanks; i++) const SizedBox.shrink(),
+            for (var i = 0; i < trailingBlanks; i++) SizedBox.shrink(),
           ],
         ),
       ],
@@ -2268,10 +2491,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final isToday = date == WorkoutService.startOfDay(DateTime.now());
 
     return Container(
-      margin: const EdgeInsets.all(3),
+      margin: EdgeInsets.all(context.dimensions.values.s3),
       decoration: BoxDecoration(
         color: isToday ? _selectedSurface : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(context.dimensions.values.s8),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -2280,11 +2503,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
             calories > 0 ? NumberFormat.compact().format(calories) : '',
             style: TextStyle(
               color: calories > 0 ? _accent : _muted,
-              fontSize: 15,
+              fontSize: context.textSizes.s15,
               fontWeight: FontWeight.w700,
             ),
           ),
-          Text('${date.day}', style: TextStyle(color: _muted, fontSize: 13)),
+          Text(
+            '${date.day}',
+            style: TextStyle(color: _muted, fontSize: context.textSizes.s13),
+          ),
         ],
       ),
     );
@@ -2292,39 +2518,49 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _leaderboardToggle() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 22),
+      padding: EdgeInsets.symmetric(horizontal: context.dimensions.values.s22),
       child: Row(
         children: [
           Expanded(
             child: SizedBox(
-              height: 44,
+              height: context.dimensions.values.s44,
               child: TextButton(
                 style: TextButton.styleFrom(
                   backgroundColor: _showFriends ? _accent : Colors.transparent,
                   foregroundColor: _showFriends ? _cream : _accent,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(
+                      context.dimensions.values.s10,
+                    ),
                   ),
                 ),
                 onPressed: () => setState(() => _showFriends = true),
-                child: Text('Friends', style: TextStyle(fontSize: 17)),
+                child: Text(
+                  'Friends',
+                  style: TextStyle(fontSize: context.textSizes.s17),
+                ),
               ),
             ),
           ),
-          SizedBox(width: 24),
+          SizedBox(width: context.dimensions.values.s24),
           Expanded(
             child: SizedBox(
-              height: 44,
+              height: context.dimensions.values.s44,
               child: TextButton(
                 style: TextButton.styleFrom(
                   backgroundColor: !_showFriends ? _accent : Colors.transparent,
                   foregroundColor: !_showFriends ? _cream : _accent,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(
+                      context.dimensions.values.s10,
+                    ),
                   ),
                 ),
                 onPressed: () => setState(() => _showFriends = false),
-                child: const Text('Groups', style: TextStyle(fontSize: 17)),
+                child: Text(
+                  'Groups',
+                  style: TextStyle(fontSize: context.textSizes.s17),
+                ),
               ),
             ),
           ),
@@ -2344,11 +2580,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(26, 16, 26, 10),
+            padding: EdgeInsets.fromLTRB(
+              context.dimensions.values.s26,
+              context.dimensions.values.s16,
+              context.dimensions.values.s26,
+              context.dimensions.values.s10,
+            ),
             child: Text(
               'Active Bot and Chill Bot are included in the free app. Sign in from Settings to add real friends.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: _muted, fontSize: 17, height: 1.25),
+              style: TextStyle(
+                color: _muted,
+                fontSize: context.textSizes.s17,
+                height: 1.25,
+              ),
             ),
           ),
           ...members.indexed.map((entry) {
@@ -2392,8 +2637,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
             if (memberSnapshot.connectionState == ConnectionState.waiting &&
                 members.isEmpty) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(vertical: 26),
+              return Padding(
+                padding: EdgeInsets.symmetric(
+                  vertical: context.dimensions.values.s26,
+                ),
                 child: Center(child: CircularProgressIndicator()),
               );
             }
@@ -2402,13 +2649,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 if (members.where((member) => member.canRemove).isEmpty)
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(26, 16, 26, 10),
+                    padding: EdgeInsets.fromLTRB(
+                      context.dimensions.values.s26,
+                      context.dimensions.values.s16,
+                      context.dimensions.values.s26,
+                      context.dimensions.values.s10,
+                    ),
                     child: Text(
                       'No friends yet. Send a request from Chats or add group members from a group.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: _muted,
-                        fontSize: 17,
+                        fontSize: context.textSizes.s17,
                         height: 1.25,
                       ),
                     ),
@@ -2606,13 +2858,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return AlertDialog(
           backgroundColor: _surface,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(context.dimensions.values.s22),
             side: BorderSide(color: _divider),
           ),
           title: Text('Remove friend?', style: TextStyle(color: _cream)),
           content: Text(
             'Remove ${friend.name} from your friends list?',
-            style: TextStyle(color: _muted, fontSize: 16),
+            style: TextStyle(color: _muted, fontSize: context.textSizes.s16),
           ),
           actions: [
             TextButton(
@@ -2673,47 +2925,66 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return InkWell(
       onTap: onTap,
       child: Container(
-        height: 78,
+        height: context.dimensions.values.s78,
         decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: _divider)),
         ),
         child: Row(
           children: [
             SizedBox(
-              width: 58,
+              width: context.dimensions.values.s58,
               child: Center(
                 child: rank <= 3
                     ? Icon(
                         Icons.emoji_events,
                         color: medalColors[rank],
-                        size: 22,
+                        size: context.dimensions.values.s22,
                       )
                     : Text(
                         '$rank',
-                        style: TextStyle(color: _cream, fontSize: 18),
+                        style: TextStyle(
+                          color: _cream,
+                          fontSize: context.textSizes.s18,
+                        ),
                       ),
               ),
             ),
-            _profileAvatar(photoUrl: photoUrl, icon: icon, radius: 23),
-            SizedBox(width: 24),
+            _profileAvatar(
+              photoUrl: photoUrl,
+              icon: icon,
+              radius: context.dimensions.values.s23,
+            ),
+            SizedBox(width: context.dimensions.values.s24),
             Expanded(
               child: Text(
                 name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: _cream, fontSize: 21),
+                style: TextStyle(
+                  color: _cream,
+                  fontSize: context.textSizes.s21,
+                ),
               ),
             ),
-            SizedBox(width: 16),
+            SizedBox(width: context.dimensions.values.s16),
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
                   NumberFormat.decimalPattern().format(value),
-                  style: TextStyle(color: _cream, fontSize: 21),
+                  style: TextStyle(
+                    color: _cream,
+                    fontSize: context.textSizes.s21,
+                  ),
                 ),
-                Text(subtitle, style: TextStyle(color: _muted, fontSize: 13)),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: _muted,
+                    fontSize: context.textSizes.s13,
+                  ),
+                ),
               ],
             ),
             SizedBox(width: onRemove == null ? 24 : 8),
@@ -2722,7 +2993,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 tooltip: 'Remove friend',
                 visualDensity: VisualDensity.compact,
                 onPressed: onRemove,
-                icon: Icon(Icons.person_remove_alt_1, color: _muted, size: 22),
+                icon: Icon(
+                  Icons.person_remove_alt_1,
+                  color: _muted,
+                  size: context.dimensions.values.s22,
+                ),
               ),
           ],
         ),
@@ -2750,11 +3025,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(26, 16, 26, 10),
+            padding: EdgeInsets.fromLTRB(
+              context.dimensions.values.s26,
+              context.dimensions.values.s16,
+              context.dimensions.values.s26,
+              context.dimensions.values.s10,
+            ),
             child: Text(
               'Group creation is included in the free app. Sign in from Settings to create and compete in groups.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: _muted, fontSize: 17, height: 1.25),
+              style: TextStyle(
+                color: _muted,
+                fontSize: context.textSizes.s17,
+                height: 1.25,
+              ),
             ),
           ),
           _rankRow(
@@ -2778,8 +3062,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final groups = snapshot.data?.docs ?? [];
 
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 26),
+          return Padding(
+            padding: EdgeInsets.symmetric(
+              vertical: context.dimensions.values.s26,
+            ),
             child: Center(child: CircularProgressIndicator()),
           );
         }
@@ -2793,8 +3079,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             if (groupSnapshot.connectionState == ConnectionState.waiting &&
                 rankedGroups.isEmpty &&
                 groups.isNotEmpty) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(vertical: 26),
+              return Padding(
+                padding: EdgeInsets.symmetric(
+                  vertical: context.dimensions.values.s26,
+                ),
                 child: Center(child: CircularProgressIndicator()),
               );
             }
@@ -2803,13 +3091,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 if (groups.isEmpty)
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(26, 16, 26, 10),
+                    padding: EdgeInsets.fromLTRB(
+                      context.dimensions.values.s26,
+                      context.dimensions.values.s16,
+                      context.dimensions.values.s26,
+                      context.dimensions.values.s10,
+                    ),
                     child: Text(
                       'No groups yet. Create one to compare calories and workout minutes with friends.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: _muted,
-                        fontSize: 17,
+                        fontSize: context.textSizes.s17,
                         height: 1.25,
                       ),
                     ),
@@ -2996,12 +3289,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 18),
+      padding: EdgeInsets.only(bottom: context.dimensions.values.s18),
       child: Row(
         children: [
           SizedBox(
-            width: 76,
-            child: Text(label, style: TextStyle(color: _muted, fontSize: 16)),
+            width: context.dimensions.values.s76,
+            child: Text(
+              label,
+              style: TextStyle(color: _muted, fontSize: context.textSizes.s16),
+            ),
           ),
           Expanded(
             child: Column(
@@ -3010,9 +3306,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 _historyValueBar(
                   valueText: valueText,
                   widthFactor: widthFactor,
-                  fontSize: 19,
+                  fontSize: context.textSizes.s19,
                 ),
-                SizedBox(height: 5),
+                SizedBox(height: context.dimensions.values.s5),
                 Text('$minutes min trained', style: TextStyle(color: _muted)),
               ],
             ),
@@ -3033,21 +3329,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: EdgeInsets.symmetric(vertical: context.dimensions.values.s4),
         child: Row(
           children: [
-            Text(label, style: TextStyle(color: _cream, fontSize: 20)),
+            Text(
+              label,
+              style: TextStyle(color: _cream, fontSize: context.textSizes.s20),
+            ),
             const Spacer(),
             if (icon != null) ...[
-              Icon(icon, color: resolvedValueColor, size: 20),
-              SizedBox(width: 10),
+              Icon(
+                icon,
+                color: resolvedValueColor,
+                size: context.dimensions.values.s20,
+              ),
+              SizedBox(width: context.dimensions.values.s10),
             ],
             Flexible(
               child: Text(
                 value,
                 textAlign: TextAlign.right,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: resolvedValueColor, fontSize: 20),
+                style: TextStyle(
+                  color: resolvedValueColor,
+                  fontSize: context.textSizes.s20,
+                ),
               ),
             ),
           ],
@@ -3060,15 +3366,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return InkWell(
       onTap: onTap,
       child: Container(
-        height: 58,
-        padding: const EdgeInsets.symmetric(horizontal: 22),
+        height: context.dimensions.values.s58,
+        padding: EdgeInsets.symmetric(
+          horizontal: context.dimensions.values.s22,
+        ),
         decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: _surface)),
         ),
         child: Row(
           children: [
             Expanded(
-              child: Text(label, style: TextStyle(color: _cream, fontSize: 20)),
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: _cream,
+                  fontSize: context.textSizes.s20,
+                ),
+              ),
             ),
             if (value.isNotEmpty)
               Flexible(
@@ -3076,11 +3390,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   value,
                   textAlign: TextAlign.right,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: _muted, fontSize: 20),
+                  style: TextStyle(
+                    color: _muted,
+                    fontSize: context.textSizes.s20,
+                  ),
                 ),
               ),
-            SizedBox(width: 8),
-            Icon(Icons.chevron_right, color: _muted, size: 26),
+            SizedBox(width: context.dimensions.values.s8),
+            Icon(
+              Icons.chevron_right,
+              color: _muted,
+              size: context.dimensions.values.s26,
+            ),
           ],
         ),
       ),
@@ -3113,8 +3434,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: _background,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(context.dimensions.values.s22),
+        ),
       ),
       builder: (context) {
         return StatefulBuilder(
@@ -3149,9 +3472,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
             return Padding(
               padding: EdgeInsets.only(
-                left: 24,
-                right: 24,
-                top: 18,
+                left: context.dimensions.values.s24,
+                right: context.dimensions.values.s24,
+                top: context.dimensions.values.s18,
                 bottom: MediaQuery.of(context).viewInsets.bottom + 24,
               ),
               child: Column(
@@ -3163,42 +3486,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Expanded(
                         child: Text(
                           'Add workout',
-                          style: TextStyle(color: _cream, fontSize: 22),
+                          style: TextStyle(
+                            color: _cream,
+                            fontSize: context.textSizes.s22,
+                          ),
                         ),
                       ),
                       TextButton(
                         onPressed: saving ? null : save,
                         child: Text(
                           'Save',
-                          style: TextStyle(color: _accent, fontSize: 18),
+                          style: TextStyle(
+                            color: _accent,
+                            fontSize: context.textSizes.s18,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 14),
+                  SizedBox(height: context.dimensions.values.s14),
                   _darkNumberField(
                     controller: caloriesController,
                     label: 'Calories burned',
                     suffix: 'cals',
                   ),
-                  SizedBox(height: 12),
+                  SizedBox(height: context.dimensions.values.s12),
                   _darkNumberField(
                     controller: minutesController,
                     label: 'Minutes trained',
                     suffix: 'min',
                   ),
-                  SizedBox(height: 12),
+                  SizedBox(height: context.dimensions.values.s12),
                   TextField(
                     controller: notesController,
                     style: TextStyle(color: _cream),
                     decoration: _inputDecoration('Notes optional'),
                   ),
-                  SizedBox(height: 12),
+                  SizedBox(height: context.dimensions.values.s12),
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
                       foregroundColor: _cream,
                       side: BorderSide(color: _surface),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding: EdgeInsets.symmetric(
+                        vertical: context.dimensions.values.s12,
+                      ),
                     ),
                     onPressed: saving
                         ? null
@@ -3224,15 +3555,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     icon: Icon(Icons.calendar_today),
                     label: Text(DateFormat.yMMMd().format(selectedDate)),
                   ),
-                  SizedBox(height: 16),
+                  SizedBox(height: context.dimensions.values.s16),
                   SizedBox(
-                    height: 50,
+                    height: context.dimensions.values.s50,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _accent,
                         foregroundColor: _onAccent,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(
+                            context.dimensions.values.s14,
+                          ),
                         ),
                       ),
                       onPressed: saving ? null : save,
@@ -3240,7 +3573,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ? CircularProgressIndicator(color: _cream)
                           : Text(
                               'Save workout',
-                              style: TextStyle(fontSize: 17),
+                              style: TextStyle(fontSize: context.textSizes.s17),
                             ),
                     ),
                   ),
@@ -3270,8 +3603,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: _background,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(context.dimensions.values.s22),
+        ),
       ),
       builder: (context) {
         return StatefulBuilder(
@@ -3284,7 +3619,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
             }
 
             return Padding(
-              padding: const EdgeInsets.fromLTRB(24, 18, 24, 34),
+              padding: EdgeInsets.fromLTRB(
+                context.dimensions.values.s24,
+                context.dimensions.values.s18,
+                context.dimensions.values.s24,
+                context.dimensions.values.s34,
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -3294,55 +3634,78 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: Text(
                           'Daily Calorie Goal',
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: _cream, fontSize: 21),
+                          style: TextStyle(
+                            color: _cream,
+                            fontSize: context.textSizes.s21,
+                          ),
                         ),
                       ),
                       TextButton(
                         onPressed: save,
                         child: Text(
                           'Done',
-                          style: TextStyle(color: _accent, fontSize: 18),
+                          style: TextStyle(
+                            color: _accent,
+                            fontSize: context.textSizes.s18,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 20),
+                  SizedBox(height: context.dimensions.values.s20),
                   Text(
                     NumberFormat.decimalPattern().format(goal),
                     style: TextStyle(
                       color: _goalLime,
-                      fontSize: 52,
+                      fontSize: context.textSizes.s52,
                       fontWeight: FontWeight.w300,
                     ),
                   ),
-                  SizedBox(height: 18),
+                  SizedBox(height: context.dimensions.values.s18),
                   Container(
                     decoration: BoxDecoration(
                       color: _surface,
-                      borderRadius: BorderRadius.circular(28),
+                      borderRadius: BorderRadius.circular(
+                        context.dimensions.values.s28,
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          icon: Icon(Icons.remove, color: _cream, size: 26),
+                          icon: Icon(
+                            Icons.remove,
+                            color: _cream,
+                            size: context.dimensions.values.s26,
+                          ),
                           onPressed: () {
                             setSheetState(() => goal = math.max(50, goal - 50));
                           },
                         ),
-                        Container(width: 1, height: 28, color: _muted),
+                        Container(
+                          width: context.dimensions.values.s1,
+                          height: context.dimensions.values.s28,
+                          color: _muted,
+                        ),
                         IconButton(
-                          icon: Icon(Icons.add, color: _cream, size: 26),
+                          icon: Icon(
+                            Icons.add,
+                            color: _cream,
+                            size: context.dimensions.values.s26,
+                          ),
                           onPressed: () => setSheetState(() => goal += 50),
                         ),
                       ],
                     ),
                   ),
-                  SizedBox(height: 20),
+                  SizedBox(height: context.dimensions.values.s20),
                   Text(
                     'Set the calorie target you want to hit each training day. Streaks count days where this goal is met.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: _cream, fontSize: 16),
+                    style: TextStyle(
+                      color: _cream,
+                      fontSize: context.textSizes.s16,
+                    ),
                   ),
                 ],
               ),
@@ -3367,7 +3730,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             label: 'Minutes',
             suffix: 'min',
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: context.dimensions.values.s16),
           _primarySheetButton(
             label: 'Save duration',
             onPressed: () async {
@@ -3464,7 +3827,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   clipBehavior: Clip.none,
                   children: [
                     CircleAvatar(
-                      radius: 46,
+                      radius: context.dimensions.values.s46,
                       backgroundColor: _accent,
                       backgroundImage: selectedPhoto != null
                           ? FileImage(selectedPhoto!)
@@ -3472,7 +3835,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ? NetworkImage(photoUrl.trim())
                           : null,
                       child: selectedPhoto == null && photoUrl.trim().isEmpty
-                          ? Icon(Icons.person, color: _background, size: 46)
+                          ? Icon(
+                              Icons.person,
+                              color: _background,
+                              size: context.dimensions.values.s46,
+                            )
                           : null,
                     ),
                     Positioned(
@@ -3496,25 +3863,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   });
                                 },
                         ),
-                        icon: const Icon(Icons.camera_alt_outlined),
+                        icon: Icon(Icons.camera_alt_outlined),
                       ),
                     ),
                   ],
                 ),
               ),
-              SizedBox(height: 22),
+              SizedBox(height: context.dimensions.values.s22),
               TextField(
                 controller: nameController,
                 style: TextStyle(color: _cream),
                 decoration: _inputDecoration('Display name'),
               ),
-              SizedBox(height: 12),
+              SizedBox(height: context.dimensions.values.s12),
               TextField(
                 controller: usernameController,
                 style: TextStyle(color: _cream),
                 decoration: _inputDecoration('Username'),
               ),
-              SizedBox(height: 16),
+              SizedBox(height: context.dimensions.values.s16),
               _primarySheetButton(
                 label: saving ? 'Saving…' : 'Save profile',
                 onPressed: saving
@@ -3573,13 +3940,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return showModalBottomSheet<void>(
       context: context,
       backgroundColor: _background,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(context.dimensions.values.s22),
+        ),
       ),
       builder: (context) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
+            padding: EdgeInsets.fromLTRB(
+              context.dimensions.values.s24,
+              context.dimensions.values.s18,
+              context.dimensions.values.s24,
+              context.dimensions.values.s24,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -3648,8 +4022,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: _background,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(context.dimensions.values.s22),
+        ),
       ),
       builder: (context) {
         return StreamBuilder<List<Map<String, dynamic>>>(
@@ -3671,18 +4047,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
             );
 
             return Padding(
-              padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
+              padding: EdgeInsets.fromLTRB(
+                context.dimensions.values.s24,
+                context.dimensions.values.s18,
+                context.dimensions.values.s24,
+                context.dimensions.values.s28,
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('Recaps', style: TextStyle(color: _cream, fontSize: 22)),
-                  SizedBox(height: 16),
+                  Text(
+                    'Recaps',
+                    style: TextStyle(
+                      color: _cream,
+                      fontSize: context.textSizes.s22,
+                    ),
+                  ),
+                  SizedBox(height: context.dimensions.values.s16),
                   _recapRow('Today', today.calories, today.minutes),
                   _recapRow('This week', week.calories, week.minutes),
                   _recapRow('This month', month.calories, month.minutes),
                   _recapRow('All time', lifetimeCalories, lifetimeMinutes),
-                  SizedBox(height: 16),
+                  SizedBox(height: context.dimensions.values.s16),
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
                       foregroundColor: _cream,
@@ -3694,8 +4081,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         'Burn Camp recap: ${NumberFormat.decimalPattern().format(month.calories)} calories and ${month.minutes} minutes trained this month.',
                       );
                     },
-                    icon: const Icon(Icons.ios_share),
-                    label: const Text('Share monthly recap'),
+                    icon: Icon(Icons.ios_share),
+                    label: Text('Share monthly recap'),
                   ),
                 ],
               ),
@@ -3732,7 +4119,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return AlertDialog(
           backgroundColor: _surface,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(context.dimensions.values.s22),
             side: BorderSide(color: _divider),
           ),
           title: Text(name, style: TextStyle(color: _cream)),
@@ -3742,8 +4129,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               future: detailsFuture,
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
-                  return const SizedBox(
-                    height: 180,
+                  return SizedBox(
+                    height: context.dimensions.values.s180,
                     child: Center(child: CircularProgressIndicator()),
                   );
                 }
@@ -3776,9 +4163,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 'Calories',
                                 NumberFormat.compact().format(calories),
                               ),
-                              SizedBox(width: 10),
+                              SizedBox(width: context.dimensions.values.s10),
                               _groupStatPill('Minutes', '$minutes'),
-                              SizedBox(width: 10),
+                              SizedBox(width: context.dimensions.values.s10),
                               _groupStatPill(
                                 'Goals',
                                 '$goalsMet/${members.length}',
@@ -3786,19 +4173,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ],
                           ),
                           if (pendingInvites > 0) ...[
-                            SizedBox(height: 12),
+                            SizedBox(height: context.dimensions.values.s12),
                             Text(
                               '$pendingInvites pending invite${pendingInvites == 1 ? '' : 's'}',
-                              style: TextStyle(color: _muted, fontSize: 13),
+                              style: TextStyle(
+                                color: _muted,
+                                fontSize: context.textSizes.s13,
+                              ),
                             ),
                           ],
-                          SizedBox(height: 16),
+                          SizedBox(height: context.dimensions.values.s16),
                           Divider(color: _divider),
-                          SizedBox(height: 6),
+                          SizedBox(height: context.dimensions.values.s6),
                           if (members.isEmpty)
                             Text(
                               'No members found yet.',
-                              style: TextStyle(color: _muted, fontSize: 16),
+                              style: TextStyle(
+                                color: _muted,
+                                fontSize: context.textSizes.s16,
+                              ),
                             )
                           else
                             ...members.indexed.map((entry) {
@@ -3865,10 +4258,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _groupStatPill(String label, String value) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+        padding: EdgeInsets.symmetric(
+          horizontal: context.dimensions.values.s10,
+          vertical: context.dimensions.values.s12,
+        ),
         decoration: BoxDecoration(
           color: _selectedSurface,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(context.dimensions.values.s14),
         ),
         child: Column(
           children: [
@@ -3879,11 +4275,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               style: TextStyle(
                 color: _cream,
                 fontWeight: FontWeight.w700,
-                fontSize: 17,
+                fontSize: context.textSizes.s17,
               ),
             ),
-            SizedBox(height: 3),
-            Text(label, style: TextStyle(color: _muted, fontSize: 12)),
+            SizedBox(height: context.dimensions.values.s3),
+            Text(
+              label,
+              style: TextStyle(color: _muted, fontSize: context.textSizes.s12),
+            ),
           ],
         ),
       ),
@@ -3903,26 +4302,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
         : math.min(1.0, member.calories / member.goalCalories);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: EdgeInsets.symmetric(vertical: context.dimensions.values.s10),
       child: Row(
         children: [
           SizedBox(
-            width: 30,
+            width: context.dimensions.values.s30,
             child: Text(
               '$rank',
               style: TextStyle(color: _muted, fontWeight: FontWeight.w700),
             ),
           ),
           CircleAvatar(
-            radius: 19,
+            radius: context.dimensions.values.s19,
             backgroundColor: member.goalMet ? _accent : _selectedSurface,
             child: Icon(
               member.goalMet ? Icons.local_fire_department : Icons.person,
               color: _background,
-              size: 20,
+              size: context.dimensions.values.s20,
             ),
           ),
-          SizedBox(width: 12),
+          SizedBox(width: context.dimensions.values.s12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -3937,19 +4336,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         style: TextStyle(
                           color: _cream,
                           fontWeight: FontWeight.w700,
-                          fontSize: 16,
+                          fontSize: context.textSizes.s16,
                         ),
                       ),
                     ),
                     if (isOwner) ...[
-                      SizedBox(width: 6),
-                      Icon(Icons.star, color: _goalLime, size: 15),
+                      SizedBox(width: context.dimensions.values.s6),
+                      Icon(
+                        Icons.star,
+                        color: _goalLime,
+                        size: context.dimensions.values.s15,
+                      ),
                     ],
                   ],
                 ),
-                SizedBox(height: 6),
+                SizedBox(height: context.dimensions.values.s6),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(
+                    context.dimensions.values.s20,
+                  ),
                   child: LinearProgressIndicator(
                     value: progress,
                     minHeight: 5,
@@ -3960,28 +4365,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
           ),
-          SizedBox(width: 12),
+          SizedBox(width: context.dimensions.values.s12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
                 NumberFormat.compact().format(member.calories),
-                style: TextStyle(color: _cream, fontSize: 16),
+                style: TextStyle(
+                  color: _cream,
+                  fontSize: context.textSizes.s16,
+                ),
               ),
               Text(
                 '${member.minutes} min',
-                style: TextStyle(color: _muted, fontSize: 12),
+                style: TextStyle(
+                  color: _muted,
+                  fontSize: context.textSizes.s12,
+                ),
               ),
             ],
           ),
-          SizedBox(width: 8),
+          SizedBox(width: context.dimensions.values.s8),
           SizedBox(
-            width: 34,
+            width: context.dimensions.values.s34,
             child: isFriend
                 ? Icon(
                     isCurrentUser ? Icons.person : Icons.check_circle,
                     color: isCurrentUser ? _muted : _goalLime,
-                    size: 22,
+                    size: context.dimensions.values.s22,
                   )
                 : IconButton(
                     tooltip: 'Add friend',
@@ -3997,7 +4408,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             final sent = await onAddFriend();
                             if (sent && mounted) setState(() {});
                           },
-                    icon: Icon(Icons.add_circle, color: _accent, size: 24),
+                    icon: Icon(
+                      Icons.add_circle,
+                      color: _accent,
+                      size: context.dimensions.values.s24,
+                    ),
                   ),
           ),
         ],
@@ -4023,8 +4438,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: _background,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(context.dimensions.values.s22),
+        ),
       ),
       builder: (context) {
         return StatefulBuilder(
@@ -4138,9 +4555,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
             return Padding(
               padding: EdgeInsets.only(
-                left: 24,
-                right: 24,
-                top: 18,
+                left: context.dimensions.values.s24,
+                right: context.dimensions.values.s24,
+                top: context.dimensions.values.s18,
                 bottom: MediaQuery.of(context).viewInsets.bottom + 28,
               ),
               child: SafeArea(
@@ -4151,14 +4568,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     Text(
                       'Invite to $groupName',
-                      style: TextStyle(color: _cream, fontSize: 22),
+                      style: TextStyle(
+                        color: _cream,
+                        fontSize: context.textSizes.s22,
+                      ),
                     ),
-                    SizedBox(height: 8),
+                    SizedBox(height: context.dimensions.values.s8),
                     Text(
                       'Enter a Burn Camp username. Existing members and pending invites will be skipped.',
-                      style: TextStyle(color: _muted, fontSize: 14),
+                      style: TextStyle(
+                        color: _muted,
+                        fontSize: context.textSizes.s14,
+                      ),
                     ),
-                    SizedBox(height: 16),
+                    SizedBox(height: context.dimensions.values.s16),
                     TextField(
                       controller: usernameController,
                       style: TextStyle(color: _cream),
@@ -4169,15 +4592,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         if (!sending) sendInvite();
                       },
                     ),
-                    SizedBox(height: 18),
+                    SizedBox(height: context.dimensions.values.s18),
                     SizedBox(
-                      height: 50,
+                      height: context.dimensions.values.s50,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _accent,
                           foregroundColor: _onAccent,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(
+                              context.dimensions.values.s14,
+                            ),
                           ),
                         ),
                         onPressed: sending ? null : sendInvite,
@@ -4185,7 +4610,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ? CircularProgressIndicator(color: _cream)
                             : Text(
                                 'Send invite',
-                                style: TextStyle(fontSize: 17),
+                                style: TextStyle(
+                                  fontSize: context.textSizes.s17,
+                                ),
                               ),
                       ),
                     ),
@@ -4227,8 +4654,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: _background,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(context.dimensions.values.s22),
+        ),
       ),
       builder: (context) {
         return StatefulBuilder(
@@ -4347,9 +4776,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
             return Padding(
               padding: EdgeInsets.only(
-                left: 24,
-                right: 24,
-                top: 18,
+                left: context.dimensions.values.s24,
+                right: context.dimensions.values.s24,
+                top: context.dimensions.values.s18,
                 bottom: MediaQuery.of(context).viewInsets.bottom + 28,
               ),
               child: SafeArea(
@@ -4361,15 +4790,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     children: [
                       Text(
                         'Create group',
-                        style: TextStyle(color: _cream, fontSize: 22),
+                        style: TextStyle(
+                          color: _cream,
+                          fontSize: context.textSizes.s22,
+                        ),
                       ),
-                      SizedBox(height: 16),
+                      SizedBox(height: context.dimensions.values.s16),
                       TextField(
                         controller: groupNameController,
                         style: TextStyle(color: _cream),
                         decoration: _inputDecoration('Group name'),
                       ),
-                      SizedBox(height: 14),
+                      SizedBox(height: context.dimensions.values.s14),
                       Row(
                         children: [
                           Expanded(
@@ -4380,22 +4812,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               onSubmitted: (_) => addManualUsername(),
                             ),
                           ),
-                          SizedBox(width: 10),
+                          SizedBox(width: context.dimensions.values.s10),
                           IconButton.filled(
                             style: IconButton.styleFrom(
                               backgroundColor: _accent,
                               foregroundColor: _onAccent,
                             ),
                             onPressed: addManualUsername,
-                            icon: const Icon(Icons.add),
+                            icon: Icon(Icons.add),
                           ),
                         ],
                       ),
                       if (manualUsernames.isNotEmpty) ...[
-                        SizedBox(height: 10),
+                        SizedBox(height: context.dimensions.values.s10),
                         Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
+                          spacing: context.dimensions.values.s8,
+                          runSpacing: context.dimensions.values.s8,
                           children: manualUsernames.map((username) {
                             return InputChip(
                               label: Text('@$username'),
@@ -4408,18 +4840,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           }).toList(),
                         ),
                       ],
-                      SizedBox(height: 18),
+                      SizedBox(height: context.dimensions.values.s18),
                       Text(
                         'Pick from friends',
-                        style: TextStyle(color: _cream, fontSize: 16),
+                        style: TextStyle(
+                          color: _cream,
+                          fontSize: context.textSizes.s16,
+                        ),
                       ),
-                      SizedBox(height: 8),
+                      SizedBox(height: context.dimensions.values.s8),
                       FutureBuilder<List<_GroupInviteOption>>(
                         future: friendsFuture,
                         builder: (context, snapshot) {
                           if (!snapshot.hasData) {
-                            return const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 20),
+                            return Padding(
+                              padding: EdgeInsets.symmetric(
+                                vertical: context.dimensions.values.s20,
+                              ),
                               child: Center(child: CircularProgressIndicator()),
                             );
                           }
@@ -4464,15 +4901,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           );
                         },
                       ),
-                      SizedBox(height: 18),
+                      SizedBox(height: context.dimensions.values.s18),
                       SizedBox(
-                        height: 50,
+                        height: context.dimensions.values.s50,
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: _accent,
                             foregroundColor: _onAccent,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(
+                                context.dimensions.values.s14,
+                              ),
                             ),
                           ),
                           onPressed: saving ? null : createGroup,
@@ -4480,7 +4919,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ? CircularProgressIndicator(color: _cream)
                               : Text(
                                   'Create group',
-                                  style: TextStyle(fontSize: 17),
+                                  style: TextStyle(
+                                    fontSize: context.textSizes.s17,
+                                  ),
                                 ),
                         ),
                       ),
@@ -4622,7 +5063,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 style: TextStyle(color: _cream),
                 decoration: _inputDecoration('Friend username'),
               ),
-              SizedBox(height: 12),
+              SizedBox(height: context.dimensions.values.s12),
               _primarySheetButton(
                 label: 'Hide friend',
                 onPressed: () async {
@@ -4651,11 +5092,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   controller.clear();
                 },
               ),
-              SizedBox(height: 16),
+              SizedBox(height: context.dimensions.values.s16),
               if (hidden.isEmpty)
                 Text(
                   'No hidden friends yet.',
-                  style: TextStyle(color: _muted, fontSize: 15),
+                  style: TextStyle(
+                    color: _muted,
+                    fontSize: context.textSizes.s15,
+                  ),
                 )
               else
                 ...hidden.map(
@@ -4710,23 +5154,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: _background,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(context.dimensions.values.s22),
+        ),
       ),
       builder: (context) {
         return SafeArea(
           top: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
+            padding: EdgeInsets.fromLTRB(
+              context.dimensions.values.s24,
+              context.dimensions.values.s18,
+              context.dimensions.values.s24,
+              context.dimensions.values.s28,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
                   'Workout tracking',
-                  style: TextStyle(color: _cream, fontSize: 22),
+                  style: TextStyle(
+                    color: _cream,
+                    fontSize: context.textSizes.s22,
+                  ),
                 ),
-                SizedBox(height: 16),
+                SizedBox(height: context.dimensions.values.s16),
                 _trackingModeOption(
                   title: 'Manual entry',
                   subtitle: 'Type calories burned and minutes trained.',
@@ -4739,7 +5193,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     _showManualTrackingPage();
                   },
                 ),
-                SizedBox(height: 12),
+                SizedBox(height: context.dimensions.values.s12),
                 _trackingModeOption(
                   title: 'Sync Apple Health',
                   subtitle: isIos
@@ -4775,22 +5229,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }) {
     return InkWell(
       onTap: enabled ? onTap : null,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(context.dimensions.values.s18),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(context.dimensions.values.s16),
         decoration: BoxDecoration(
           color: selected ? _selectedSurface : _surface,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(context.dimensions.values.s18),
           border: Border.all(color: selected ? _accent : _divider),
         ),
         child: Row(
           children: [
             CircleAvatar(
-              radius: 22,
+              radius: context.dimensions.values.s22,
               backgroundColor: enabled ? _accent : _divider,
-              child: Icon(icon, color: _background, size: 24),
+              child: Icon(
+                icon,
+                color: _background,
+                size: context.dimensions.values.s24,
+              ),
             ),
-            SizedBox(width: 14),
+            SizedBox(width: context.dimensions.values.s14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -4799,16 +5257,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     title,
                     style: TextStyle(
                       color: enabled ? _cream : _muted,
-                      fontSize: 17,
+                      fontSize: context.textSizes.s17,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  SizedBox(height: 4),
-                  Text(subtitle, style: TextStyle(color: _muted, fontSize: 14)),
+                  SizedBox(height: context.dimensions.values.s4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: _muted,
+                      fontSize: context.textSizes.s14,
+                    ),
+                  ),
                 ],
               ),
             ),
-            SizedBox(width: 10),
+            SizedBox(width: context.dimensions.values.s10),
             if (selected)
               Icon(Icons.check_circle, color: _accent)
             else
@@ -4836,22 +5300,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _pushDetailPage(
       title: 'Manual Tracking',
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(24, 36, 24, 28),
+        padding: EdgeInsets.fromLTRB(
+          context.dimensions.values.s24,
+          context.dimensions.values.s36,
+          context.dimensions.values.s24,
+          context.dimensions.values.s28,
+        ),
         children: [
-          Icon(Icons.check_circle, color: _goalLime, size: 54),
-          SizedBox(height: 18),
+          Icon(
+            Icons.check_circle,
+            color: _goalLime,
+            size: context.dimensions.values.s54,
+          ),
+          SizedBox(height: context.dimensions.values.s18),
           Text(
             'Connected to your manual workout log',
             textAlign: TextAlign.center,
-            style: TextStyle(color: _cream, fontSize: 24),
+            style: TextStyle(color: _cream, fontSize: context.textSizes.s24),
           ),
-          SizedBox(height: 16),
+          SizedBox(height: context.dimensions.values.s16),
           Text(
             'Burn Camp is built around intentional manual entry. Add calories burned and minutes trained after each workout. Your daily totals, goals, alerts, recaps, and leaderboard use those entries.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: _muted, fontSize: 18, height: 1.35),
+            style: TextStyle(
+              color: _muted,
+              fontSize: context.textSizes.s18,
+              height: 1.35,
+            ),
           ),
-          const SizedBox(height: 34),
+          SizedBox(height: context.dimensions.values.s34),
           _infoBlock(
             'Today from manual entries',
             'Calories and minutes are summed from every workout you save today.',
@@ -4864,7 +5341,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             'Tip',
             'Set your default workout duration to speed up the add-workout flow.',
           ),
-          SizedBox(height: 28),
+          SizedBox(height: context.dimensions.values.s28),
           _primarySheetButton(
             label: 'Add workout',
             onPressed: _showAddWorkoutSheet,
@@ -4880,22 +5357,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: StatefulBuilder(
         builder: (context, setPageState) {
           return ListView(
-            padding: const EdgeInsets.fromLTRB(24, 36, 24, 28),
+            padding: EdgeInsets.fromLTRB(
+              context.dimensions.values.s24,
+              context.dimensions.values.s36,
+              context.dimensions.values.s24,
+              context.dimensions.values.s28,
+            ),
             children: [
-              Icon(Icons.favorite, color: _accent, size: 54),
-              SizedBox(height: 18),
+              Icon(
+                Icons.favorite,
+                color: _accent,
+                size: context.dimensions.values.s54,
+              ),
+              SizedBox(height: context.dimensions.values.s18),
               Text(
                 'Apple Health sync',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: _cream, fontSize: 24),
+                style: TextStyle(
+                  color: _cream,
+                  fontSize: context.textSizes.s24,
+                ),
               ),
-              SizedBox(height: 16),
+              SizedBox(height: context.dimensions.values.s16),
               Text(
                 'Burn Camp can read Health app workouts on iPhone and import active calories plus workout duration into your daily totals.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: _muted, fontSize: 18, height: 1.35),
+                style: TextStyle(
+                  color: _muted,
+                  fontSize: context.textSizes.s18,
+                  height: 1.35,
+                ),
               ),
-              const SizedBox(height: 34),
+              SizedBox(height: context.dimensions.values.s34),
               _infoBlock(
                 'What syncs',
                 'Workout duration and active energy burned from Apple Health workouts.',
@@ -4908,7 +5401,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 'Manual backup',
                 'You can still add a workout manually if Health sync is unavailable.',
               ),
-              SizedBox(height: 28),
+              SizedBox(height: context.dimensions.values.s28),
               _primarySheetButton(
                 label: _syncingAppleHealth
                     ? 'Syncing Apple Health...'
@@ -4917,12 +5410,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ? () {}
                     : () => _syncAppleHealthWorkouts(setPageState),
               ),
-              SizedBox(height: 12),
+              SizedBox(height: context.dimensions.values.s12),
               OutlinedButton(
                 style: OutlinedButton.styleFrom(
                   foregroundColor: _cream,
                   side: BorderSide(color: _divider),
-                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  padding: EdgeInsets.symmetric(
+                    vertical: context.dimensions.values.s13,
+                  ),
                 ),
                 onPressed: _showAddWorkoutSheet,
                 child: Text('Add manual workout'),
@@ -4982,17 +5477,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
               builder: (context, snapshot) {
                 final groups = snapshot.data?.docs ?? [];
                 return ListView(
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
+                  padding: EdgeInsets.fromLTRB(
+                    context.dimensions.values.s24,
+                    context.dimensions.values.s24,
+                    context.dimensions.values.s24,
+                    context.dimensions.values.s28,
+                  ),
                   children: [
                     _primarySheetButton(
                       label: 'Create group',
                       onPressed: _showCreateGroupSheet,
                     ),
-                    SizedBox(height: 20),
+                    SizedBox(height: context.dimensions.values.s20),
                     if (groups.isEmpty)
                       Text(
                         'No groups yet. Create one to compare calorie totals with friends.',
-                        style: TextStyle(color: _muted, fontSize: 17),
+                        style: TextStyle(
+                          color: _muted,
+                          fontSize: context.textSizes.s17,
+                        ),
                       )
                     else
                       ...groups.map((doc) {
@@ -5018,7 +5521,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _pushDetailPage(
       title: 'Help and Feedback',
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
+        padding: EdgeInsets.fromLTRB(
+          context.dimensions.values.s24,
+          context.dimensions.values.s24,
+          context.dimensions.values.s24,
+          context.dimensions.values.s28,
+        ),
         children: [
           _detailListTile(
             title: 'How tracking works',
@@ -5038,10 +5546,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             icon: Icons.feedback_outlined,
             onTap: () => _shareText(context, 'Burn Camp feedback: '),
           ),
-          SizedBox(height: 18),
+          SizedBox(height: context.dimensions.values.s18),
           Text(
             'Support note: this screen is local for now. Hook it to email, a feedback form, or your support inbox when ready.',
-            style: TextStyle(color: _muted, fontSize: 15),
+            style: TextStyle(color: _muted, fontSize: context.textSizes.s15),
           ),
         ],
       ),
@@ -5052,31 +5560,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _pushDetailPage(
       title: 'Support Burn Camp',
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(24, 36, 24, 28),
+        padding: EdgeInsets.fromLTRB(
+          context.dimensions.values.s24,
+          context.dimensions.values.s36,
+          context.dimensions.values.s24,
+          context.dimensions.values.s28,
+        ),
         children: [
-          Icon(Icons.local_fire_department, color: _accent, size: 64),
-          SizedBox(height: 18),
+          Icon(
+            Icons.local_fire_department,
+            color: _accent,
+            size: context.dimensions.values.s64,
+          ),
+          SizedBox(height: context.dimensions.values.s18),
           Text(
             'Enjoy Burn Camp?',
             textAlign: TextAlign.center,
-            style: TextStyle(color: _cream, fontSize: 26),
+            style: TextStyle(color: _cream, fontSize: context.textSizes.s26),
           ),
-          SizedBox(height: 12),
+          SizedBox(height: context.dimensions.values.s12),
           Text(
             'Support development and unlock a cleaner premium experience as the app grows.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: _muted, fontSize: 18, height: 1.3),
+            style: TextStyle(
+              color: _muted,
+              fontSize: context.textSizes.s18,
+              height: 1.3,
+            ),
           ),
-          SizedBox(height: 28),
+          SizedBox(height: context.dimensions.values.s28),
           _supportPlan('Yearly', '\$12', '\$1/month', 'Best value'),
           _supportPlan('Monthly', '\$2/month', '', ''),
           _supportPlan('Lifetime', '\$25', '', ''),
-          SizedBox(height: 18),
+          SizedBox(height: context.dimensions.values.s18),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: Text(
               'Not now',
-              style: TextStyle(color: _muted, fontSize: 18),
+              style: TextStyle(color: _muted, fontSize: context.textSizes.s18),
             ),
           ),
         ],
@@ -5088,10 +5609,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _pushDetailPage(
       title: title,
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(context.dimensions.values.s24),
         child: Text(
           body,
-          style: TextStyle(color: _cream, fontSize: 18, height: 1.35),
+          style: TextStyle(
+            color: _cream,
+            fontSize: context.textSizes.s18,
+            height: 1.35,
+          ),
         ),
       ),
     );
@@ -5107,18 +5632,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _infoBlock(String title, String body) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      padding: EdgeInsets.symmetric(vertical: context.dimensions.values.s16),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: _divider)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: TextStyle(color: _cream, fontSize: 18)),
-          SizedBox(height: 6),
+          Text(
+            title,
+            style: TextStyle(color: _cream, fontSize: context.textSizes.s18),
+          ),
+          SizedBox(height: context.dimensions.values.s6),
           Text(
             body,
-            style: TextStyle(color: _muted, fontSize: 15, height: 1.3),
+            style: TextStyle(
+              color: _muted,
+              fontSize: context.textSizes.s15,
+              height: 1.3,
+            ),
           ),
         ],
       ),
@@ -5133,8 +5665,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, color: _accent, size: 30),
-      title: Text(title, style: TextStyle(color: _cream, fontSize: 18)),
+      leading: Icon(icon, color: _accent, size: context.dimensions.values.s30),
+      title: Text(
+        title,
+        style: TextStyle(color: _cream, fontSize: context.textSizes.s18),
+      ),
       subtitle: Text(subtitle, style: TextStyle(color: _muted)),
       trailing: onTap == null ? null : Icon(Icons.chevron_right, color: _muted),
       onTap: onTap,
@@ -5143,11 +5678,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _supportPlan(String title, String price, String right, String badge) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      margin: EdgeInsets.only(bottom: context.dimensions.values.s16),
+      padding: EdgeInsets.symmetric(
+        horizontal: context.dimensions.values.s20,
+        vertical: context.dimensions.values.s18,
+      ),
       decoration: BoxDecoration(
         color: _cream,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(context.dimensions.values.s16),
       ),
       child: Row(
         children: [
@@ -5155,10 +5693,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: TextStyle(color: _background, fontSize: 22)),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: _background,
+                    fontSize: context.textSizes.s22,
+                  ),
+                ),
                 Text(
                   price,
-                  style: TextStyle(color: _selectedSurface, fontSize: 17),
+                  style: TextStyle(
+                    color: _selectedSurface,
+                    fontSize: context.textSizes.s17,
+                  ),
                 ),
               ],
             ),
@@ -5167,9 +5714,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               if (right.isNotEmpty)
-                Text(right, style: TextStyle(color: _background, fontSize: 20)),
+                Text(
+                  right,
+                  style: TextStyle(
+                    color: _background,
+                    fontSize: context.textSizes.s20,
+                  ),
+                ),
               if (badge.isNotEmpty)
-                Text(badge, style: TextStyle(color: _accent, fontSize: 14)),
+                Text(
+                  badge,
+                  style: TextStyle(
+                    color: _accent,
+                    fontSize: context.textSizes.s14,
+                  ),
+                ),
             ],
           ),
         ],
@@ -5214,23 +5773,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: _background,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(context.dimensions.values.s22),
+        ),
       ),
       builder: (context) {
         return Padding(
           padding: EdgeInsets.only(
-            left: 24,
-            right: 24,
-            top: 18,
+            left: context.dimensions.values.s24,
+            right: context.dimensions.values.s24,
+            top: context.dimensions.values.s18,
             bottom: MediaQuery.of(context).viewInsets.bottom + 28,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(title, style: TextStyle(color: _cream, fontSize: 22)),
-              SizedBox(height: 16),
+              Text(
+                title,
+                style: TextStyle(
+                  color: _cream,
+                  fontSize: context.textSizes.s22,
+                ),
+              ),
+              SizedBox(height: context.dimensions.values.s16),
               child,
             ],
           ),
@@ -5244,35 +5811,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required VoidCallback onPressed,
   }) {
     return SizedBox(
-      height: 48,
+      height: context.dimensions.values.s48,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
           backgroundColor: _accent,
           foregroundColor: _onAccent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(context.dimensions.values.s14),
           ),
         ),
         onPressed: onPressed,
-        child: Text(label, style: TextStyle(fontSize: 16)),
+        child: Text(label, style: TextStyle(fontSize: context.textSizes.s16)),
       ),
     );
   }
 
   Widget _recapRow(String label, int calories, int minutes) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: EdgeInsets.symmetric(vertical: context.dimensions.values.s12),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: _divider)),
       ),
       child: Row(
         children: [
           Expanded(
-            child: Text(label, style: TextStyle(color: _cream, fontSize: 17)),
+            child: Text(
+              label,
+              style: TextStyle(color: _cream, fontSize: context.textSizes.s17),
+            ),
           ),
           Text(
             '${NumberFormat.decimalPattern().format(calories)} cals · $minutes min',
-            style: TextStyle(color: _muted, fontSize: 15),
+            style: TextStyle(color: _muted, fontSize: context.textSizes.s15),
           ),
         ],
       ),
@@ -5429,7 +5999,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return TextField(
       controller: controller,
       keyboardType: TextInputType.number,
-      style: TextStyle(color: _cream, fontSize: 18),
+      style: TextStyle(color: _cream, fontSize: context.textSizes.s18),
       decoration: _inputDecoration(label).copyWith(
         suffixText: suffix,
         suffixStyle: TextStyle(color: _muted),
@@ -5444,7 +6014,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       filled: true,
       fillColor: _surface,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(context.dimensions.values.s14),
         borderSide: BorderSide.none,
       ),
     );
@@ -5840,7 +6410,12 @@ class _StatsShareScreenState extends State<_StatsShareScreen> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+              padding: EdgeInsets.fromLTRB(
+                context.dimensions.values.s24,
+                context.dimensions.values.s20,
+                context.dimensions.values.s24,
+                context.dimensions.values.s0,
+              ),
               child: Row(
                 children: [
                   _roundButton(
@@ -5854,13 +6429,13 @@ class _StatsShareScreenState extends State<_StatsShareScreen> {
                     onPressed: _cyclePeriod,
                     tooltip: 'Change stats range',
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: context.dimensions.values.s12),
                   _roundTextButton(
                     label: 'A',
                     onPressed: () => setState(() => _largeType = !_largeType),
                     tooltip: 'Toggle text size',
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: context.dimensions.values.s12),
                   _roundButton(
                     icon: _squareFormat
                         ? Icons.phone_iphone
@@ -5871,7 +6446,7 @@ class _StatsShareScreenState extends State<_StatsShareScreen> {
                         ? 'Use full-screen size'
                         : 'Use 1:1 size',
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: context.dimensions.values.s12),
                   _roundButton(
                     icon: Icons.photo_library_outlined,
                     onPressed: _showBackgroundMenu,
@@ -5883,7 +6458,12 @@ class _StatsShareScreenState extends State<_StatsShareScreen> {
             Expanded(
               child: Center(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                  padding: EdgeInsets.fromLTRB(
+                    context.dimensions.values.s24,
+                    context.dimensions.values.s24,
+                    context.dimensions.values.s24,
+                    context.dimensions.values.s16,
+                  ),
                   child: AspectRatio(
                     aspectRatio: _squareFormat ? 1 : 9 / 16,
                     child: RepaintBoundary(
@@ -5895,7 +6475,12 @@ class _StatsShareScreenState extends State<_StatsShareScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(26, 8, 26, 24),
+              padding: EdgeInsets.fromLTRB(
+                context.dimensions.values.s26,
+                context.dimensions.values.s8,
+                context.dimensions.values.s26,
+                context.dimensions.values.s24,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -5916,19 +6501,19 @@ class _StatsShareScreenState extends State<_StatsShareScreen> {
                   ),
                   _socialButton(
                     label: 'Save',
-                    child: const Icon(
+                    child: Icon(
                       Icons.file_download_outlined,
                       color: Colors.white,
-                      size: 34,
+                      size: context.dimensions.values.s34,
                     ),
                     onPressed: _saving ? null : _savePreview,
                   ),
                   _socialButton(
                     label: 'Share',
-                    child: const Icon(
+                    child: Icon(
                       Icons.ios_share,
                       color: Colors.white,
-                      size: 34,
+                      size: context.dimensions.values.s34,
                     ),
                     onPressed: _saving ? null : _sharePreview,
                   ),
@@ -5946,9 +6531,11 @@ class _StatsShareScreenState extends State<_StatsShareScreen> {
     final calories = NumberFormat.decimalPattern().format(_aggregate.calories);
     final minutes = NumberFormat.decimalPattern().format(_aggregate.minutes);
     final titleSize = _largeType
-        ? (_squareFormat ? 66.0 : 84.0)
-        : (_squareFormat ? 52.0 : 66.0);
-    final subtitleSize = _largeType ? 25.0 : 21.0;
+        ? (_squareFormat ? context.textSizes.s66 : context.textSizes.s84)
+        : (_squareFormat ? context.textSizes.s52 : context.textSizes.s66);
+    final subtitleSize = _largeType
+        ? context.textSizes.s25
+        : context.textSizes.s21;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(_squareFormat ? 28 : 34),
@@ -5972,19 +6559,21 @@ class _StatsShareScreenState extends State<_StatsShareScreen> {
           if (!_transparentBackground)
             Container(color: Colors.black.withValues(alpha: 0.18)),
           Padding(
-            padding: const EdgeInsets.all(28),
+            padding: EdgeInsets.all(context.dimensions.values.s28),
             child: Column(
               children: [
                 Align(
                   alignment: Alignment.topRight,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: context.dimensions.values.s14,
+                      vertical: context.dimensions.values.s8,
                     ),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.22),
-                      borderRadius: BorderRadius.circular(999),
+                      borderRadius: BorderRadius.circular(
+                        context.dimensions.values.pill,
+                      ),
                       border: Border.all(
                         color: Colors.white.withValues(alpha: 0.16),
                       ),
@@ -6009,7 +6598,7 @@ class _StatsShareScreenState extends State<_StatsShareScreen> {
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: context.dimensions.values.s8),
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
@@ -6023,12 +6612,12 @@ class _StatsShareScreenState extends State<_StatsShareScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: context.dimensions.values.s12),
                 Wrap(
                   alignment: WrapAlignment.center,
                   crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 12,
-                  runSpacing: 8,
+                  spacing: context.dimensions.values.s12,
+                  runSpacing: context.dimensions.values.s8,
                   children: [
                     _previewMetric('$minutes min'),
                     _previewMetric(
@@ -6040,10 +6629,12 @@ class _StatsShareScreenState extends State<_StatsShareScreen> {
                 const Spacer(),
                 if (!_squareFormat)
                   Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(context.dimensions.values.s16),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.20),
-                      borderRadius: BorderRadius.circular(22),
+                      borderRadius: BorderRadius.circular(
+                        context.dimensions.values.s22,
+                      ),
                       border: Border.all(
                         color: Colors.white.withValues(alpha: 0.12),
                       ),
@@ -6051,26 +6642,26 @@ class _StatsShareScreenState extends State<_StatsShareScreen> {
                     child: Column(
                       children: [
                         _miniStat('Best week', widget.shareData.bestWeek),
-                        const SizedBox(height: 8),
+                        SizedBox(height: context.dimensions.values.s8),
                         _miniStat('Best month', widget.shareData.bestMonth),
                       ],
                     ),
                   ),
-                const SizedBox(height: 28),
+                SizedBox(height: context.dimensions.values.s28),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
                       Icons.local_fire_department,
                       color: textColor,
-                      size: 26,
+                      size: context.dimensions.values.s26,
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: context.dimensions.values.s8),
                     Text(
                       'Burn Camp',
                       style: TextStyle(
                         color: textColor,
-                        fontSize: 27,
+                        fontSize: context.textSizes.s27,
                         fontWeight: FontWeight.w900,
                         fontStyle: FontStyle.italic,
                       ),
@@ -6090,7 +6681,7 @@ class _StatsShareScreenState extends State<_StatsShareScreen> {
       value,
       style: TextStyle(
         color: _textColor.withValues(alpha: 0.88),
-        fontSize: 21,
+        fontSize: context.textSizes.s21,
         fontWeight: FontWeight.w600,
       ),
     );
@@ -6106,7 +6697,7 @@ class _StatsShareScreenState extends State<_StatsShareScreen> {
             fontWeight: FontWeight.w700,
           ),
         ),
-        const SizedBox(width: 10),
+        SizedBox(width: context.dimensions.values.s10),
         Expanded(
           child: Text(
             value,
@@ -6133,9 +6724,13 @@ class _StatsShareScreenState extends State<_StatsShareScreen> {
           customBorder: const CircleBorder(),
           onTap: onPressed,
           child: SizedBox(
-            width: 58,
-            height: 58,
-            child: Icon(icon, color: Colors.white, size: 30),
+            width: context.dimensions.values.s58,
+            height: context.dimensions.values.s58,
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: context.dimensions.values.s30,
+            ),
           ),
         ),
       ),
@@ -6156,14 +6751,14 @@ class _StatsShareScreenState extends State<_StatsShareScreen> {
           customBorder: const CircleBorder(),
           onTap: onPressed,
           child: SizedBox(
-            width: 58,
-            height: 58,
+            width: context.dimensions.values.s58,
+            height: context.dimensions.values.s58,
             child: Center(
               child: Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   color: Colors.white,
-                  fontSize: 19,
+                  fontSize: context.textSizes.s19,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -6185,8 +6780,8 @@ class _StatsShareScreenState extends State<_StatsShareScreen> {
         customBorder: const CircleBorder(),
         onTap: onPressed,
         child: Container(
-          width: 64,
-          height: 64,
+          width: context.dimensions.values.s64,
+          height: context.dimensions.values.s64,
           decoration: BoxDecoration(
             color: Colors.black,
             shape: BoxShape.circle,
@@ -6269,25 +6864,34 @@ class _StatsShareScreenState extends State<_StatsShareScreen> {
     return showModalBottomSheet<void>(
       context: context,
       backgroundColor: const Color(0xEE161616),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(context.dimensions.values.s24),
+        ),
       ),
       builder: (context) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
+            padding: EdgeInsets.fromLTRB(
+              context.dimensions.values.s24,
+              context.dimensions.values.s18,
+              context.dimensions.values.s24,
+              context.dimensions.values.s24,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  width: 42,
-                  height: 4,
+                  width: context.dimensions.values.s42,
+                  height: context.dimensions.values.s4,
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.35),
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(
+                      context.dimensions.values.pill,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 18),
+                SizedBox(height: context.dimensions.values.s18),
                 _backgroundOption(
                   icon: Icons.camera_alt_outlined,
                   title: 'Camera',
@@ -6323,12 +6927,16 @@ class _StatsShareScreenState extends State<_StatsShareScreen> {
   }) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, color: Colors.white, size: 28),
+      leading: Icon(
+        icon,
+        color: Colors.white,
+        size: context.dimensions.values.s28,
+      ),
       title: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           color: Colors.white,
-          fontSize: 22,
+          fontSize: context.textSizes.s22,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -6470,10 +7078,10 @@ class _InstagramGlyph extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 38,
-      height: 38,
+      width: context.dimensions.values.s38,
+      height: context.dimensions.values.s38,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(11),
+        borderRadius: BorderRadius.circular(context.dimensions.values.s11),
         gradient: const LinearGradient(
           begin: Alignment.bottomLeft,
           end: Alignment.topRight,
@@ -6486,7 +7094,11 @@ class _InstagramGlyph extends StatelessWidget {
           ],
         ),
       ),
-      child: const Icon(Icons.camera_alt, color: Colors.white, size: 24),
+      child: Icon(
+        Icons.camera_alt,
+        color: Colors.white,
+        size: context.dimensions.values.s24,
+      ),
     );
   }
 }
@@ -6497,13 +7109,15 @@ class _SnapGlyph extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 38,
-      height: 38,
+      width: context.dimensions.values.s38,
+      height: context.dimensions.values.s38,
       decoration: BoxDecoration(
         color: const Color(0xFFFFFC00),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(context.dimensions.values.s10),
       ),
-      child: const Center(child: Text('👻', style: TextStyle(fontSize: 22))),
+      child: Center(
+        child: Text('👻', style: TextStyle(fontSize: context.textSizes.s22)),
+      ),
     );
   }
 }
@@ -6514,20 +7128,20 @@ class _FacebookGlyph extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 38,
-      height: 38,
+      width: context.dimensions.values.s38,
+      height: context.dimensions.values.s38,
       decoration: const BoxDecoration(
         color: Color(0xFF1877F2),
         shape: BoxShape.circle,
       ),
-      child: const Center(
+      child: Center(
         child: Text(
           'f',
           style: TextStyle(
             color: Colors.white,
-            fontSize: 32,
+            fontSize: context.textSizes.s32,
             fontWeight: FontWeight.w900,
-            height: 1,
+            height: context.dimensions.values.s1,
           ),
         ),
       ),
@@ -6668,7 +7282,7 @@ class _WeekdayLabel extends StatelessWidget {
           color: isLight
               ? ClaudePalette.lightMutedText
               : ClaudePalette.mutedText,
-          fontSize: 13,
+          fontSize: context.textSizes.s13,
         ),
       ),
     );
@@ -6692,7 +7306,11 @@ class _DashboardDetailPage extends StatelessWidget {
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           leading: IconButton(
-            icon: Icon(Icons.chevron_left, color: foreground, size: 34),
+            icon: Icon(
+              Icons.chevron_left,
+              color: foreground,
+              size: context.dimensions.values.s34,
+            ),
             onPressed: () => Navigator.of(context).pop(),
           ),
           centerTitle: true,
@@ -6700,7 +7318,7 @@ class _DashboardDetailPage extends StatelessWidget {
             title,
             style: TextStyle(
               color: foreground,
-              fontSize: 22,
+              fontSize: context.textSizes.s22,
               fontWeight: FontWeight.w700,
             ),
           ),

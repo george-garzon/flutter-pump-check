@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_pump_check/theme/app_dimensions.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class WeightChart extends StatelessWidget {
@@ -14,7 +15,7 @@ class WeightChart extends StatelessWidget {
       );
 
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(context.dimensions.values.s16),
       child: LineChart(
         LineChartData(
           borderData: FlBorderData(show: false),

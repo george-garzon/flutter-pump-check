@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pump_check/theme/app_dimensions.dart';
 import 'package:flutter_pump_check/services/workout_service.dart';
 
 class AddEntryScreen extends StatefulWidget {
@@ -40,7 +41,7 @@ class _AddEntryScreenState extends State<AddEntryScreen> {
       backgroundColor: Colors.transparent,
       appBar: AppBar(title: const Text('Add Workout')),
       body: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(context.dimensions.values.s20),
         child: Form(
           key: _formKey,
           child: Column(
@@ -51,17 +52,17 @@ class _AddEntryScreenState extends State<AddEntryScreen> {
                 decoration: const InputDecoration(labelText: 'Calories burned'),
                 validator: _positiveNumberValidator,
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: context.dimensions.values.s16),
               TextFormField(
                 controller: _minutesController,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(labelText: 'Minutes trained'),
                 validator: _positiveNumberValidator,
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: context.dimensions.values.s24),
               SizedBox(
                 width: double.infinity,
-                height: 52,
+                height: context.dimensions.values.s52,
                 child: ElevatedButton(
                   onPressed: _saving ? null : _saveEntry,
                   child: _saving

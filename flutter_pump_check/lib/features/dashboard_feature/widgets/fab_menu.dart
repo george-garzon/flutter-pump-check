@@ -5,15 +5,12 @@ import 'package:flutter_pump_check/screens/workout_modal.dart';
 class FabMenu extends StatelessWidget {
   final VoidCallback refresh;
 
-  const FabMenu({
-    super.key,
-    required this.refresh,
-  });
+  const FabMenu({super.key, required this.refresh});
 
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<String>(
-      icon: const Icon(Icons.fitness_center),
+      icon: Icon(Icons.fitness_center),
       itemBuilder: (context) => [
         const PopupMenuItem(value: 'workout', child: Text('Add Workout')),
         const PopupMenuItem(value: 'goal', child: Text('Edit Goal')),
@@ -25,9 +22,7 @@ class FabMenu extends StatelessWidget {
         } else if (value == 'goal') {
           await Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (_) => const EditGoalScreen(),
-            ),
+            MaterialPageRoute(builder: (_) => const EditGoalScreen()),
           );
         }
       },

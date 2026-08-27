@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pump_check/theme/app_dimensions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_pump_check/screens/workout_modal.dart';
 import 'package:flutter_pump_check/services/workout_service.dart';
 import 'package:flutter_pump_check/widgets/progress_ring.dart';
 import '../../../../theme/theme.dart';
-
+import 'package:flutter_pump_check/theme/text_sizes.dart';
 
 class ProfileCard extends StatelessWidget {
   final String name;
@@ -27,7 +28,6 @@ class ProfileCard extends StatelessWidget {
     final user = FirebaseAuth.instance.currentUser!;
 
     return FutureBuilder<Map<String, dynamic>?>(
-
       future: WorkoutService.getToday(),
       builder: (context, snapshot) {
         final todayData = snapshot.data ?? {};
@@ -37,14 +37,17 @@ class ProfileCard extends StatelessWidget {
         return Card(
           color: colors.secondary,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(context.dimensions.values.s16),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(context.dimensions.values.s16),
             child: Row(
               children: [
-                ProgressRing(progress: progress, size: 70),
-                const SizedBox(width: 16),
+                ProgressRing(
+                  progress: progress,
+                  size: context.dimensions.values.s70,
+                ),
+                SizedBox(width: context.dimensions.values.s16),
 
                 Expanded(
                   child: Column(
@@ -58,35 +61,36 @@ class ProfileCard extends StatelessWidget {
                               name,
                               style: theme.textTheme.bodyMedium!.copyWith(
                                 fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                                color: colors.black
+                                fontSize: context.textSizes.s18,
+                                color: colors.black,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      Text('Today: $todayMinutes min',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                            color: colors.gray,
-                          )
+                      SizedBox(height: context.dimensions.values.s4),
+                      Text(
+                        'Today: $todayMinutes min',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: context.textSizes.s12,
+                          color: colors.gray,
+                        ),
                       ),
                       Text(
                         'Goal: $goal min',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 12,
+                          fontSize: context.textSizes.s12,
                           color: colors.gray,
-                        )
-                      )
+                        ),
+                      ),
                     ],
                   ),
                 ),
 
-                const SizedBox(width: 8),
+                SizedBox(width: context.dimensions.values.s8),
 
                 Column(
                   children: [
@@ -98,7 +102,7 @@ class ProfileCard extends StatelessWidget {
                         color: colors.gray,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: context.dimensions.values.s8),
                     ElevatedButton.icon(
                       onPressed: () async {
                         final logged = await showWorkoutModal(context);
@@ -107,8 +111,11 @@ class ProfileCard extends StatelessWidget {
                           onWorkoutAdded();
                         }
                       },
-                      icon: const Icon(Icons.fitness_center, size: 16),
-                      label: const Text("Pump"),
+                      icon: Icon(
+                        Icons.fitness_center,
+                        size: context.dimensions.values.s16,
+                      ),
+                      label: Text("Pump"),
                     ),
                   ],
                 ),

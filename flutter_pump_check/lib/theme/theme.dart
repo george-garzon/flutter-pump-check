@@ -1,9 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_pump_check/theme/app_dimensions.dart';
 import 'claude_palette.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'text_sizes.dart';
 
 class AppTheme {
   //
@@ -45,7 +47,7 @@ class AppTheme {
             backgroundColor: appColors.primary,
             foregroundColor: appColors.white,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensionTokens.radius12),
             ),
           ),
         ),
@@ -53,15 +55,15 @@ class AppTheme {
           filled: true,
           fillColor: appColors.gray2,
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppDimensionTokens.radius12),
             borderSide: BorderSide(color: appColors.brownExtraLight),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppDimensionTokens.radius12),
             borderSide: BorderSide(color: appColors.brownExtraLight),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppDimensionTokens.radius12),
             borderSide: BorderSide(color: appColors.primary),
           ),
         ),
@@ -71,7 +73,7 @@ class AppTheme {
           scrolledUnderElevation: 0,
           titleTextStyle: AppTypography.typography.bodyLarge.copyWith(
             color: appColors.black,
-            fontSize: 17,
+            fontSize: AppTextSizeTokens.s17,
           ),
           surfaceTintColor: Colors.transparent,
         ),
@@ -86,7 +88,7 @@ class AppTheme {
             return TextStyle(
               color: color,
               fontWeight: FontWeight.w600,
-              fontSize: 12,
+              fontSize: AppTextSizeTokens.s12,
             );
           }),
         ),
@@ -226,7 +228,9 @@ class AppTheme {
       style: ElevatedButton.styleFrom(
         backgroundColor: appColors.primary,
         foregroundColor: appColors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppDimensionTokens.radius12),
+        ),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
@@ -235,15 +239,15 @@ class AppTheme {
       labelStyle: TextStyle(color: appColors.gray4),
       hintStyle: TextStyle(color: appColors.gray4),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppDimensionTokens.radius12),
         borderSide: BorderSide(color: appColors.brown),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppDimensionTokens.radius12),
         borderSide: BorderSide(color: appColors.brown),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppDimensionTokens.radius12),
         borderSide: BorderSide(color: appColors.primary),
       ),
     ),
@@ -253,7 +257,7 @@ class AppTheme {
       scrolledUnderElevation: 0,
       titleTextStyle: AppTypography.typography.bodyLarge.copyWith(
         color: appColors.white,
-        fontSize: 17,
+        fontSize: AppTextSizeTokens.s17,
       ),
       surfaceTintColor: Colors.transparent,
     ),
@@ -268,7 +272,7 @@ class AppTheme {
         return TextStyle(
           color: color,
           fontWeight: FontWeight.w600,
-          fontSize: 12,
+          fontSize: AppTextSizeTokens.s12,
         );
       }),
     ),

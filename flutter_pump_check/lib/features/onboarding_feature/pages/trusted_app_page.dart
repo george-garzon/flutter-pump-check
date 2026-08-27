@@ -1,28 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pump_check/features/onboarding_feature/widgets/onboarding_gaps.dart';
 import 'package:flutter_pump_check/features/onboarding_feature/widgets/onboarding_page_shell.dart';
 import 'package:flutter_pump_check/features/onboarding_feature/widgets/onboarding_text.dart';
+import 'package:flutter_pump_check/theme/app_dimensions.dart';
 import 'package:flutter_pump_check/theme/claude_palette.dart';
+import 'package:flutter_pump_check/theme/text_sizes.dart';
 
 class TrustedAppOnboardingPage extends StatelessWidget {
   const TrustedAppOnboardingPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const OnboardingPageShell(
+    final spacing = context.dimensions.spacing;
+
+    return OnboardingPageShell(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(height: 22),
-          OnboardingEyebrow('Trusted app'),
-          SizedBox(height: 12),
-          OnboardingTitle('Built to feel credible before you commit.'),
-          SizedBox(height: 12),
-          OnboardingBody(
+          GapH(spacing.sectionMedium),
+          const OnboardingEyebrow('Trusted app'),
+          GapH(spacing.lg),
+          const OnboardingTitle('Built to feel credible before you commit.'),
+          GapH(spacing.lg),
+          const OnboardingBody(
             'A quick trust check before the trial screen. This mirrors the social-proof moment from the reference onboarding.',
           ),
-          SizedBox(height: 20),
-          TrustedAppContentCard(),
-          SizedBox(height: 42),
+          GapH(spacing.sectionSmall),
+          const TrustedAppContentCard(),
+          GapH(spacing.pageLarge),
         ],
       ),
     );
@@ -34,41 +39,44 @@ class TrustedAppContentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dimensions = context.dimensions;
+    final spacing = dimensions.spacing;
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(22),
+      padding: EdgeInsets.all(spacing.sectionMedium),
       decoration: BoxDecoration(
         color: ClaudePalette.charcoalSurface.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(dimensions.radii.cardXLarge),
         border: Border.all(color: ClaudePalette.charcoalBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Help us grow',
             style: TextStyle(
               color: ClaudePalette.cream,
-              fontSize: 38,
+              fontSize: context.textSizes.s38,
               height: 1.05,
               fontWeight: FontWeight.w900,
             ),
           ),
-          const SizedBox(height: 14),
-          const StarRow(size: 34),
-          const SizedBox(height: 28),
+          GapH(spacing.xl),
+          StarRow(size: dimensions.icons.xl),
+          GapH(spacing.sectionXXLarge),
           const _AvatarStack(),
-          const SizedBox(height: 24),
+          GapH(spacing.sectionLarge),
           Text(
             'Join 100,000+ Blackjack players training from their phones',
             style: TextStyle(
               color: ClaudePalette.cream.withValues(alpha: 0.86),
-              fontSize: 25,
+              fontSize: context.textSizes.s25,
               height: 1.18,
               fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 24),
+          GapH(spacing.sectionLarge),
           const _TestimonialCard(
             initials: 'AR',
             name: 'Albert R.',
@@ -76,7 +84,7 @@ class TrustedAppContentCard extends StatelessWidget {
                 '“I used to just hit or split everything. Now I actually know when to double or split.”',
             color: Color(0xFF7E5A32),
           ),
-          const SizedBox(height: 14),
+          GapH(spacing.xl),
           const _TestimonialCard(
             initials: 'MA',
             name: 'Marcel A.',
@@ -91,19 +99,30 @@ class TrustedAppContentCard extends StatelessWidget {
 }
 
 class StarRow extends StatelessWidget {
-  const StarRow({this.size = 22, super.key});
+  const StarRow({this.size, super.key});
 
-  final double size;
+  final double? size;
 
   @override
   Widget build(BuildContext context) {
+    final dimensions = context.dimensions;
+    final resolvedSize = size ?? dimensions.icons.sm;
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: List.generate(
         5,
         (index) => Padding(
-          padding: EdgeInsets.only(right: index == 4 ? 0 : size * 0.12),
-          child: Icon(Icons.star, color: ClaudePalette.goal, size: size),
+          padding: EdgeInsets.only(
+            right: index == 4
+                ? 0
+                : dimensions.components.starGapFor(resolvedSize),
+          ),
+          child: Icon(
+            Icons.star,
+            color: ClaudePalette.goal,
+            size: resolvedSize,
+          ),
         ),
       ),
     );
@@ -115,8 +134,6 @@ class _AvatarStack extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const avatarSize = 62.0;
-    const overlap = 42.0;
     const avatars = [
       ('JD', Color(0xFF727A7F)),
       ('BK', Color(0xFF75613F)),
@@ -124,6 +141,9 @@ class _AvatarStack extends StatelessWidget {
       ('DM', Color(0xFF3F6E80)),
       ('LW', Color(0xFF365B4E)),
     ];
+    final dimensions = context.dimensions;
+    final avatarSize = dimensions.components.trustAvatarLarge;
+    final overlap = dimensions.components.trustAvatarOverlap;
 
     return SizedBox(
       height: avatarSize,
@@ -160,18 +180,20 @@ class TrustAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dimensions = context.dimensions;
+
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: color,
-        border: Border.all(color: Colors.black, width: 5),
+        border: Border.all(color: Colors.black, width: dimensions.spacing.xs),
       ),
       alignment: Alignment.center,
       child: Text(
         initials,
-        style: const TextStyle(
+        style: TextStyle(
           color: ClaudePalette.cream,
           fontWeight: FontWeight.w900,
         ),
@@ -195,39 +217,46 @@ class _TestimonialCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dimensions = context.dimensions;
+    final spacing = dimensions.spacing;
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: EdgeInsets.all(spacing.xxxl),
       decoration: BoxDecoration(
         color: ClaudePalette.charcoal.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(dimensions.radii.card),
         border: Border.all(color: ClaudePalette.charcoalBorder),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TrustAvatar(initials: initials, color: color, size: 54),
-          const SizedBox(width: 14),
+          TrustAvatar(
+            initials: initials,
+            color: color,
+            size: dimensions.components.trustAvatar,
+          ),
+          GapW(spacing.xl),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   name,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: ClaudePalette.cream,
-                    fontSize: 22,
+                    fontSize: context.textSizes.s22,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(height: 4),
-                const StarRow(size: 22),
-                const SizedBox(height: 14),
+                GapH(spacing.xxs),
+                StarRow(size: dimensions.icons.sm),
+                GapH(spacing.xl),
                 Text(
                   quote,
                   style: TextStyle(
                     color: ClaudePalette.cream.withValues(alpha: 0.82),
-                    fontSize: 18,
+                    fontSize: context.textSizes.s18,
                     height: 1.28,
                     fontWeight: FontWeight.w700,
                   ),
