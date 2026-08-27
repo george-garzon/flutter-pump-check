@@ -49,6 +49,11 @@
 	<string>Burn Camp uses your photo library so you can choose a custom stats share image background.</string>
 	<key>GIDClientID</key>
 	<string>460432828885-he1c6m049cqee2cvd2s4th67t84805fd.apps.googleusercontent.com</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>googlegmail</string>
+		<string>ms-outlook</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

@@ -14,6 +14,7 @@ import 'package:flutter_pump_check/services/onboarding_preferences.dart';
 import 'package:flutter_pump_check/theme/app_dimensions.dart';
 import 'package:flutter_pump_check/theme/claude_palette.dart';
 import 'package:flutter_pump_check/theme/text_sizes.dart';
+import 'package:flutter_pump_check/widgets/ad_supported_app_shell.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -42,7 +43,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   bool _requestedAppleHealthAuthorization = false;
 
   @override
+  void initState() {
+    super.initState();
+    AdSupportedAppShell.adsHidden.value = true;
+  }
+
+  @override
   void dispose() {
+    AdSupportedAppShell.adsHidden.value = false;
     _pageController.dispose();
     super.dispose();
   }
@@ -119,7 +127,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       return;
     }
 
-    await service.requestAuthorization();
+    await service.requestAuthorizationIfNeeded();
     if (!mounted) return;
 
     setState(() => _trackingMode = 'appleHealth');
@@ -134,7 +142,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: ClaudePalette.charcoal,
       body: SafeArea(
         child: Column(
           children: [

@@ -7,25 +7,31 @@ class AdSupportedAppShell extends StatelessWidget {
 
   const AdSupportedAppShell({super.key, required this.child});
 
+  static final adsHidden = ValueNotifier<bool>(false);
+
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<bool>(
-      stream: ProEntitlementService.watchIsPro(),
-      builder: (context, snapshot) {
-        final isPro = snapshot.data ?? false;
+    return ValueListenableBuilder<bool>(
+      valueListenable: adsHidden,
+      builder: (context, hideAds, _) {
+        return StreamBuilder<bool>(
+          stream: ProEntitlementService.watchIsPro(),
+          builder: (context, snapshot) {
+            final isPro = snapshot.data ?? false;
+            final showAd = !hideAds && !isPro;
+            final adHeight = showAd ? MobileAdBanner.solidHeight(context) : 0.0;
 
-        return AdSupportedAppInsets(
-          bottomAdHeight: 0,
-          child: Column(
-            children: [
-              Expanded(child: child),
-              if (!isPro)
-                SizedBox(
-                  height: MobileAdBanner.solidHeight(context),
-                  child: MobileAdBanner(),
-                ),
-            ],
-          ),
+            return AdSupportedAppInsets(
+              bottomAdHeight: 0,
+              child: Column(
+                children: [
+                  Expanded(child: child),
+                  if (showAd)
+                    SizedBox(height: adHeight, child: const MobileAdBanner()),
+                ],
+              ),
+            );
+          },
         );
       },
     );

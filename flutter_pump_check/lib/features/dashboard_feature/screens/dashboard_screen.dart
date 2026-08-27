@@ -61,7 +61,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen>
-    with SingleTickerProviderStateMixin {
+    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   static const _accent = ClaudePalette.accent;
   static const _goalLime = ClaudePalette.goal;
   static const _freeGroupLimit = 5;
@@ -99,11 +99,19 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(length: 5, vsync: this);
     _tabController.addListener(_syncSelectedTabIndex);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(_checkAppleHealthPermissionsAfterOnboarding());
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _checkAppleHealthPermissionsAfterOnboarding();
+      await _syncAppleHealthIfSelected();
     });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    unawaited(_syncAppleHealthIfSelected());
   }
 
   void _syncSelectedTabIndex() {
@@ -123,6 +131,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _tabController
       ..removeListener(_syncSelectedTabIndex)
       ..dispose();
@@ -232,8 +241,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     final service = AppleHealthService();
     if (!service.isAvailableOnDevice) return;
 
-    final hasPermissions = await service.hasRequiredPermissions();
-    if (hasPermissions || !mounted) return;
+    final shouldRequestAuthorization = await service
+        .shouldRequestAuthorization();
+    if (!shouldRequestAuthorization || !mounted) return;
     if (_appleHealthPermissionPromptShownThisSession ||
         _showingAppleHealthPermissionDialog) {
       return;
@@ -241,6 +251,84 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     _appleHealthPermissionPromptShownThisSession = true;
     await _showAppleHealthRequiredDialog(service);
+  }
+
+  Future<bool> _isAppleHealthSelectedAfterOnboarding() async {
+    final onboardingCompleted = await OnboardingPreferences.isCompleted();
+    if (!onboardingCompleted) return false;
+
+    final settings = _user == null
+        ? await _localSettingsData()
+        : (await FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(_user!.uid)
+                      .get())
+                  .data() ??
+              await _localSettingsData();
+    final trackingMode =
+        (settings['workoutTrackingMode'] as String?) ?? 'appleHealth';
+
+    return trackingMode == 'appleHealth';
+  }
+
+  Future<AppleHealthImportResult?> _syncAppleHealthIfSelected({
+    bool showSnack = false,
+    StateSetter? setPageState,
+  }) async {
+    if (_syncingAppleHealth) return null;
+
+    final appleHealthSelected = await _isAppleHealthSelectedAfterOnboarding()
+        .catchError((Object e) {
+          if (kDebugMode) {
+            debugPrint('Apple Health auto sync settings check failed: $e');
+          }
+          return false;
+        });
+    if (!appleHealthSelected) return null;
+
+    final service = AppleHealthService();
+    if (!service.isAvailableOnDevice) {
+      if (showSnack && mounted) {
+        _showSnack('Apple Health sync is available on iPhone only.');
+      }
+      return null;
+    }
+
+    if (mounted) {
+      setState(() => _syncingAppleHealth = true);
+      setPageState?.call(() => _syncingAppleHealth = true);
+    } else {
+      _syncingAppleHealth = true;
+    }
+
+    try {
+      final result = await service.importRecentWorkouts();
+      if (!mounted) return result;
+
+      if (showSnack) {
+        _showSnack(
+          result.importedWorkouts == 0
+              ? 'Apple Health connected. No new workouts found.'
+              : 'Apple Health connected. Imported ${result.importedWorkouts} workouts: ${result.calories} cals · ${result.minutes} min.',
+        );
+      }
+
+      return result;
+    } catch (e) {
+      if (showSnack && mounted) {
+        _showSnack('Apple Health sync failed: $e');
+      } else if (kDebugMode) {
+        debugPrint('Apple Health auto sync skipped: $e');
+      }
+      return null;
+    } finally {
+      if (mounted) {
+        setState(() => _syncingAppleHealth = false);
+        setPageState?.call(() => _syncingAppleHealth = false);
+      } else {
+        _syncingAppleHealth = false;
+      }
+    }
   }
 
   Future<void> _showAppleHealthRequiredDialog(
@@ -326,7 +414,10 @@ class _DashboardScreenState extends State<DashboardScreen>
             ),
             Expanded(
               child: RefreshIndicator(
-                onRefresh: () async => setState(() {}),
+                onRefresh: () async {
+                  await _syncAppleHealthIfSelected();
+                  if (mounted) setState(() {});
+                },
                 child: ListView(
                   padding: EdgeInsets.zero,
                   children: [
@@ -2596,7 +2687,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               : 'Connect and sync last 7 days',
           onPressed: _syncingAppleHealth
               ? () {}
-              : () => _syncAppleHealthWorkouts(setPageState),
+              : () => _connectAppleHealthFromSettings(setPageState),
         ),
         if (kDebugMode) ...[
           SizedBox(height: context.dimensions.values.s12),
@@ -2620,6 +2711,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     AppleHealthService service,
     StateSetter setPageState,
   ) async {
+    await service.clearAuthorizationRequested();
     await service.revokePermissions();
     if (!mounted) return;
     setPageState(() {});
@@ -2627,7 +2719,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     _showSnack('Apple Health disconnected.');
   }
 
-  Future<void> _syncAppleHealthWorkouts(StateSetter setPageState) async {
+  Future<void> _connectAppleHealthFromSettings(StateSetter setPageState) async {
     final service = AppleHealthService();
     if (!service.isAvailableOnDevice) {
       _showSnack('Apple Health sync is available on iPhone only.');
@@ -2638,13 +2730,22 @@ class _DashboardScreenState extends State<DashboardScreen>
     setState(() => _syncingAppleHealth = true);
 
     try {
+      final authorized = await service.requestAuthorization();
+      if (!authorized) {
+        if (mounted) _showSnack('Apple Health permission was not granted.');
+        return;
+      }
+
       final result = await service.importRecentWorkouts();
       if (!mounted) return;
       _showSnack(
         result.importedWorkouts == 0
-            ? 'No new Apple Health workouts found.'
-            : 'Imported ${result.importedWorkouts} workouts: ${result.calories} cals · ${result.minutes} min.',
+            ? 'Apple Health connected. No new workouts found.'
+            : 'Apple Health connected. Imported ${result.importedWorkouts} workouts: ${result.calories} cals · ${result.minutes} min.',
       );
+      if (mounted) {
+        setPageState(() {});
+      }
     } catch (e) {
       if (!mounted) return;
       _showSnack('Apple Health sync failed: $e');
@@ -2821,18 +2922,46 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Future<void> _emailHelpAndFeedback() async {
-    final uri = Uri(
+    const email = 'George.garzon@outlook.com';
+    const subject = 'Burn Camp help and feedback';
+    final mailtoUri = Uri(
       scheme: 'mailto',
-      path: 'George.garzon@outlook.com',
-      queryParameters: const {'subject': 'Burn Camp help and feedback'},
+      path: email,
+      queryParameters: const {'subject': subject},
     );
+    final gmailUri = Uri(
+      scheme: 'googlegmail',
+      host: 'co',
+      queryParameters: const {'to': email, 'subject': subject},
+    );
+    final outlookUri = Uri(
+      scheme: 'ms-outlook',
+      host: 'compose',
+      queryParameters: const {'to': email, 'subject': subject},
+    );
+    final gmailWebUri = Uri.https('mail.google.com', '/mail/', const {
+      'view': 'cm',
+      'fs': '1',
+      'to': email,
+      'su': subject,
+    });
 
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (await launchUrl(mailtoUri, mode: LaunchMode.externalApplication)) {
       return;
     }
 
-    _showSnack('No email app found. Email George.garzon@outlook.com.');
+    for (final appUri in [gmailUri, outlookUri]) {
+      if (await canLaunchUrl(appUri) &&
+          await launchUrl(appUri, mode: LaunchMode.externalApplication)) {
+        return;
+      }
+    }
+
+    if (await launchUrl(gmailWebUri, mode: LaunchMode.externalApplication)) {
+      return;
+    }
+
+    _showSnack('No email app found. Email $email.');
   }
 
   Future<void> _showWebDrawer({required String title, required String url}) {
