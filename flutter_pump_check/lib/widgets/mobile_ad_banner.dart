@@ -9,7 +9,7 @@ class MobileAdBanner extends StatefulWidget {
   static const double standardBannerHeight = 50;
 
   static double solidHeight(BuildContext context) {
-    return standardBannerHeight + MediaQuery.paddingOf(context).bottom;
+    return topGap + standardBannerHeight + MediaQuery.paddingOf(context).bottom;
   }
 
   @override

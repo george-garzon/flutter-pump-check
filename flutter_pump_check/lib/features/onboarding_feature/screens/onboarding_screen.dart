@@ -4,11 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_pump_check/features/onboarding_feature/pages/feature_page.dart';
 import 'package:flutter_pump_check/features/onboarding_feature/pages/focus_page.dart';
 import 'package:flutter_pump_check/features/onboarding_feature/pages/hero_page.dart';
-import 'package:flutter_pump_check/features/onboarding_feature/pages/paywall_page.dart';
+// import 'package:flutter_pump_check/features/onboarding_feature/pages/paywall_page.dart';
 import 'package:flutter_pump_check/features/onboarding_feature/pages/review_page.dart';
 import 'package:flutter_pump_check/features/onboarding_feature/pages/single_choice_page.dart';
 import 'package:flutter_pump_check/features/onboarding_feature/pages/tracking_mode_page.dart';
 import 'package:flutter_pump_check/features/onboarding_feature/pages/trusted_app_page.dart';
+import 'package:flutter_pump_check/services/apple_health_service.dart';
 import 'package:flutter_pump_check/services/onboarding_preferences.dart';
 import 'package:flutter_pump_check/theme/app_dimensions.dart';
 import 'package:flutter_pump_check/theme/claude_palette.dart';
@@ -22,7 +23,9 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  static const _pageCount = 10;
+  static const _showPremiumTrialPage = false;
+  static const _pageCount = _showPremiumTrialPage ? 10 : 9;
+  static const _trackingModePage = 6;
 
   final _pageController = PageController();
 
@@ -33,9 +36,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   String? _goal;
   String? _level;
   String? _trainingDays;
-  String _trackingMode = 'manual';
+  String _trackingMode = 'appleHealth';
   int _calorieGoal = 500;
   final Set<String> _focusAreas = {};
+  bool _requestedAppleHealthAuthorization = false;
 
   @override
   void dispose() {
@@ -61,11 +65,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       _showPaywallClose = false;
     });
 
-    if (value == _pageCount - 1) {
+    if (_showPremiumTrialPage && value == _pageCount - 1) {
       Timer(const Duration(seconds: 3), () {
         if (!mounted || _page != _pageCount - 1) return;
         setState(() => _showPaywallClose = true);
       });
+    }
+
+    if (value == _trackingModePage) {
+      unawaited(_requestAppleHealthAuthorization());
     }
   }
 
@@ -100,6 +108,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     if (!mounted) return;
     Navigator.of(context).pushNamedAndRemoveUntil('/dashboard', (_) => false);
+  }
+
+  Future<void> _requestAppleHealthAuthorization() async {
+    if (_requestedAppleHealthAuthorization) return;
+    _requestedAppleHealthAuthorization = true;
+
+    final service = AppleHealthService();
+    if (!service.isAvailableOnDevice) {
+      return;
+    }
+
+    await service.requestAuthorization();
+    if (!mounted) return;
+
+    setState(() => _trackingMode = 'appleHealth');
+  }
+
+  void _setTrackingMode(String value) {
+    setState(() => _trackingMode = 'appleHealth');
+    _requestedAppleHealthAuthorization = false;
+    unawaited(_requestAppleHealthAuthorization());
   }
 
   @override
@@ -170,8 +199,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   TrackingModeOnboardingPage(
                     trackingMode: _trackingMode,
-                    onTrackingModeChanged: (value) =>
-                        setState(() => _trackingMode = value),
+                    onTrackingModeChanged: _setTrackingMode,
                   ),
                   ReviewOnboardingPage(
                     goal: _goal,
@@ -181,7 +209,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     focusAreas: _focusAreas,
                   ),
                   const TrustedAppOnboardingPage(),
-                  const PaywallOnboardingPage(),
+                  // const PaywallOnboardingPage(),
                 ],
               ),
             ),
@@ -282,8 +310,7 @@ class _OnboardingBottomCta extends StatelessWidget {
     final spacing = dimensions.spacing;
     final label = switch (page) {
       0 => 'Get Started',
-      8 => 'Continue to trial',
-      9 => saving ? 'Starting...' : 'Try for Free',
+      8 => saving ? 'Starting...' : 'Start Burn Camp',
       _ => 'Continue',
     };
 
@@ -305,7 +332,7 @@ class _OnboardingBottomCta extends StatelessWidget {
                 backgroundColor: canContinue
                     ? ClaudePalette.accent
                     : ClaudePalette.charcoalSurface,
-                foregroundColor: ClaudePalette.charcoal,
+                foregroundColor: ClaudePalette.cream,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(dimensions.radii.lg),
                 ),
@@ -320,7 +347,7 @@ class _OnboardingBottomCta extends StatelessWidget {
               ),
             ),
           ),
-          if (page == 9) ...[
+          if (_OnboardingScreenState._showPremiumTrialPage && page == 9) ...[
             SizedBox(height: spacing.md),
             Text(
               'Restore · Terms · Privacy',

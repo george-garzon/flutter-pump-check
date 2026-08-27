@@ -55,14 +55,12 @@ class FocusOnboardingPage extends StatelessWidget {
                 selected: selected,
                 label: Text(option),
                 labelStyle: TextStyle(
-                  color: selected
-                      ? ClaudePalette.charcoal
-                      : ClaudePalette.cream,
+                  color: selected ? ClaudePalette.cream : ClaudePalette.cream,
                   fontWeight: FontWeight.w700,
                 ),
                 selectedColor: ClaudePalette.accent,
                 backgroundColor: ClaudePalette.charcoalSurface,
-                checkmarkColor: ClaudePalette.charcoal,
+                checkmarkColor: ClaudePalette.cream,
                 side: BorderSide(
                   color: selected
                       ? ClaudePalette.accent

@@ -9,22 +9,28 @@ class OnboardingPageShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dimensions = context.dimensions;
+    final pagePadding = EdgeInsets.fromLTRB(
+      dimensions.spacing.pageSide,
+      dimensions.spacing.pageTop,
+      dimensions.spacing.pageSide,
+      dimensions.spacing.pageBottom,
+    );
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(
-        dimensions.spacing.pageSide,
-        dimensions.spacing.pageTop,
-        dimensions.spacing.pageSide,
-        dimensions.spacing.pageBottom,
-      ),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          minHeight:
-              MediaQuery.sizeOf(context).height -
-              dimensions.components.pageMinHeightOffset,
-        ),
-        child: child,
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final minContentHeight = constraints.maxHeight - pagePadding.vertical;
+
+        return SingleChildScrollView(
+          physics: const ClampingScrollPhysics(),
+          padding: pagePadding,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: minContentHeight < 0 ? 0 : minContentHeight,
+            ),
+            child: child,
+          ),
+        );
+      },
     );
   }
 }

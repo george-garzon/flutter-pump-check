@@ -20,11 +20,7 @@ class OnboardingIconBadge extends StatelessWidget {
         color: ClaudePalette.accent,
         borderRadius: BorderRadius.circular(dimensions.radii.card),
       ),
-      child: Icon(
-        icon,
-        color: ClaudePalette.charcoal,
-        size: dimensions.icons.xxl,
-      ),
+      child: Icon(icon, color: ClaudePalette.cream, size: dimensions.icons.xxl),
     );
   }
 }
@@ -176,9 +172,7 @@ class ChoiceCard extends StatelessWidget {
                 child: Text(
                   label,
                   style: TextStyle(
-                    color: selected
-                        ? ClaudePalette.charcoal
-                        : ClaudePalette.cream,
+                    color: selected ? ClaudePalette.cream : ClaudePalette.cream,
                     fontSize: context.textSizes.s18,
                     fontWeight: FontWeight.w800,
                   ),
@@ -186,9 +180,7 @@ class ChoiceCard extends StatelessWidget {
               ),
               Icon(
                 selected ? Icons.check_circle : Icons.circle_outlined,
-                color: selected
-                    ? ClaudePalette.charcoal
-                    : ClaudePalette.mutedText,
+                color: selected ? ClaudePalette.cream : ClaudePalette.mutedText,
               ),
             ],
           ),
@@ -242,7 +234,7 @@ class TrackingChoiceCard extends StatelessWidget {
               CircleAvatar(
                 radius: dimensions.components.trackingAvatarRadius,
                 backgroundColor: selected
-                    ? ClaudePalette.charcoal
+                    ? ClaudePalette.cream
                     : ClaudePalette.charcoalBorder,
                 child: Icon(
                   icon,
@@ -258,7 +250,7 @@ class TrackingChoiceCard extends StatelessWidget {
                       title,
                       style: TextStyle(
                         color: selected
-                            ? ClaudePalette.charcoal
+                            ? ClaudePalette.cream
                             : ClaudePalette.cream,
                         fontSize: context.textSizes.s18,
                         fontWeight: FontWeight.w900,
@@ -269,7 +261,7 @@ class TrackingChoiceCard extends StatelessWidget {
                       subtitle,
                       style: TextStyle(
                         color: selected
-                            ? ClaudePalette.charcoal.withValues(alpha: 0.75)
+                            ? ClaudePalette.cream.withValues(alpha: 0.82)
                             : ClaudePalette.mutedText,
                         fontSize: context.textSizes.s14,
                         height: 1.25,
@@ -281,9 +273,7 @@ class TrackingChoiceCard extends StatelessWidget {
               GapW(spacing.md),
               Icon(
                 selected ? Icons.check_circle : Icons.circle_outlined,
-                color: selected
-                    ? ClaudePalette.charcoal
-                    : ClaudePalette.mutedText,
+                color: selected ? ClaudePalette.cream : ClaudePalette.mutedText,
               ),
             ],
           ),

@@ -1,9 +1,9 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_pump_check/screens/auth_gate.dart';
-
-import '../../../../gen/assets.gen.dart';
-import '../../../../utils/check_device_size.dart';
+import 'package:flutter_pump_check/theme/claude_palette.dart';
+import 'package:flutter_pump_check/theme/text_sizes.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -32,12 +32,28 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isLight = Theme.of(context).brightness == Brightness.light;
+    final foreground = isLight ? ClaudePalette.charcoal : ClaudePalette.cream;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(
         child: Center(
-          child: Assets.images.logoHorizDark.image(
-            width: checkVerySmallDeviceSize(context) ? 230 : 300,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('🔥', style: TextStyle(fontSize: context.textSizes.s64)),
+              const SizedBox(height: 18),
+              Text(
+                'Burn Camp',
+                style: TextStyle(
+                  color: foreground,
+                  fontSize: context.textSizes.s36,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.8,
+                ),
+              ),
+            ],
           ),
         ),
       ),

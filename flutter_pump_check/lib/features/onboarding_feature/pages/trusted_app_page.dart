@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_pump_check/features/onboarding_feature/widgets/onboarding_gaps.dart';
 import 'package:flutter_pump_check/features/onboarding_feature/widgets/onboarding_page_shell.dart';
-import 'package:flutter_pump_check/features/onboarding_feature/widgets/onboarding_text.dart';
 import 'package:flutter_pump_check/theme/app_dimensions.dart';
 import 'package:flutter_pump_check/theme/claude_palette.dart';
 import 'package:flutter_pump_check/theme/text_sizes.dart';
@@ -18,14 +17,6 @@ class TrustedAppOnboardingPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           GapH(spacing.sectionMedium),
-          const OnboardingEyebrow('Trusted app'),
-          GapH(spacing.lg),
-          const OnboardingTitle('Built to feel credible before you commit.'),
-          GapH(spacing.lg),
-          const OnboardingBody(
-            'A quick trust check before the trial screen. This mirrors the social-proof moment from the reference onboarding.',
-          ),
-          GapH(spacing.sectionSmall),
           const TrustedAppContentCard(),
           GapH(spacing.pageLarge),
         ],
@@ -54,7 +45,7 @@ class TrustedAppContentCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Help us grow',
+            'Built for momentum',
             style: TextStyle(
               color: ClaudePalette.cream,
               fontSize: context.textSizes.s38,
@@ -68,7 +59,7 @@ class TrustedAppContentCard extends StatelessWidget {
           const _AvatarStack(),
           GapH(spacing.sectionLarge),
           Text(
-            'Join 100,000+ Blackjack players training from their phones',
+            'Track calories burned, training minutes, and streaks in one focused place.',
             style: TextStyle(
               color: ClaudePalette.cream.withValues(alpha: 0.86),
               fontSize: context.textSizes.s25,
@@ -79,17 +70,17 @@ class TrustedAppContentCard extends StatelessWidget {
           GapH(spacing.sectionLarge),
           const _TestimonialCard(
             initials: 'AR',
-            name: 'Albert R.',
+            name: 'Alex R.',
             quote:
-                '“I used to just hit or split everything. Now I actually know when to double or split.”',
+                '“Logging workouts takes seconds, so I actually keep up with it after training.”',
             color: Color(0xFF7E5A32),
           ),
           GapH(spacing.xl),
           const _TestimonialCard(
             initials: 'MA',
-            name: 'Marcel A.',
+            name: 'Maya A.',
             quote:
-                '“I wasn’t aware of all the mistakes I was making. Good app.”',
+                '“The daily calorie goal and streak view make it obvious when I’m staying consistent.”',
             color: Color(0xFF44684A),
           ),
         ],
@@ -158,6 +149,7 @@ class _AvatarStack extends StatelessWidget {
                 initials: avatars[index].$1,
                 color: avatars[index].$2,
                 size: avatarSize,
+                borderColor: ClaudePalette.charcoalSurface,
               ),
             ),
         ],
@@ -171,12 +163,14 @@ class TrustAvatar extends StatelessWidget {
     required this.initials,
     required this.color,
     required this.size,
+    this.borderColor = ClaudePalette.charcoalSurface,
     super.key,
   });
 
   final String initials;
   final Color color;
   final double size;
+  final Color borderColor;
 
   @override
   Widget build(BuildContext context) {
@@ -188,7 +182,7 @@ class TrustAvatar extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: color,
-        border: Border.all(color: Colors.black, width: dimensions.spacing.xs),
+        border: Border.all(color: borderColor, width: dimensions.spacing.xs),
       ),
       alignment: Alignment.center,
       child: Text(
@@ -219,12 +213,13 @@ class _TestimonialCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final dimensions = context.dimensions;
     final spacing = dimensions.spacing;
+    final cardColor = ClaudePalette.charcoal.withValues(alpha: 0.35);
 
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(spacing.xxxl),
       decoration: BoxDecoration(
-        color: ClaudePalette.charcoal.withValues(alpha: 0.35),
+        color: cardColor,
         borderRadius: BorderRadius.circular(dimensions.radii.card),
         border: Border.all(color: ClaudePalette.charcoalBorder),
       ),
@@ -235,6 +230,7 @@ class _TestimonialCard extends StatelessWidget {
             initials: initials,
             color: color,
             size: dimensions.components.trustAvatar,
+            borderColor: cardColor,
           ),
           GapW(spacing.xl),
           Expanded(

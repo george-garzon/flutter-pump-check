@@ -5,6 +5,7 @@ import 'package:flutter_pump_check/theme/app_dimensions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_pump_check/theme/theme.dart';
+import 'package:flutter_pump_check/widgets/ad_supported_app_shell.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
@@ -140,38 +141,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (context) {
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: Icon(Icons.camera_alt_outlined),
-                title: Text('Take photo'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _pickProfilePhoto(ImageSource.camera);
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.photo_library_outlined),
-                title: Text('Choose from camera roll'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _pickProfilePhoto(ImageSource.gallery);
-                },
-              ),
-              if ((_profilePhotoUrl ?? '').isNotEmpty || _selectedPhoto != null)
+          child: Padding(
+            padding: EdgeInsets.only(
+              bottom: AdSupportedAppInsets.bottomAdHeightOf(context),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
                 ListTile(
-                  leading: Icon(Icons.delete_outline),
-                  title: Text('Remove current photo'),
+                  leading: Icon(Icons.camera_alt_outlined),
+                  title: Text('Take photo'),
                   onTap: () {
                     Navigator.of(context).pop();
-                    setState(() {
-                      _selectedPhoto = null;
-                      _profilePhotoUrl = '';
-                    });
+                    _pickProfilePhoto(ImageSource.camera);
                   },
                 ),
-            ],
+                ListTile(
+                  leading: Icon(Icons.photo_library_outlined),
+                  title: Text('Choose from camera roll'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _pickProfilePhoto(ImageSource.gallery);
+                  },
+                ),
+                if ((_profilePhotoUrl ?? '').isNotEmpty ||
+                    _selectedPhoto != null)
+                  ListTile(
+                    leading: Icon(Icons.delete_outline),
+                    title: Text('Remove current photo'),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      setState(() {
+                        _selectedPhoto = null;
+                        _profilePhotoUrl = '';
+                      });
+                    },
+                  ),
+              ],
+            ),
           ),
         );
       },

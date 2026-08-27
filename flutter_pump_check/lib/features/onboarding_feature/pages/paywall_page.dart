@@ -42,16 +42,13 @@ class PaywallOnboardingPage extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const Icon(
-                  Icons.workspace_premium,
-                  color: ClaudePalette.charcoal,
-                ),
+                const Icon(Icons.workspace_premium, color: ClaudePalette.cream),
                 GapW(spacing.lg),
                 Expanded(
                   child: Text(
                     '\$4.99/month after trial',
                     style: TextStyle(
-                      color: ClaudePalette.charcoal,
+                      color: ClaudePalette.cream,
                       fontSize: context.textSizes.s20,
                       fontWeight: FontWeight.w900,
                     ),

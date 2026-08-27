@@ -29,17 +29,9 @@ class TrackingModeOnboardingPage extends StatelessWidget {
           const OnboardingTitle('How do you want to track workouts?'),
           GapH(spacing.md),
           const OnboardingBody(
-            'Manual is selected by default. You can switch later in Settings.',
+            'Burn Camp uses Apple Health on iPhone to import workout calories and duration automatically.',
           ),
           GapH(spacing.sectionXXLarge),
-          TrackingChoiceCard(
-            selected: trackingMode == 'manual',
-            icon: Icons.edit_note,
-            title: 'Manual tracking',
-            subtitle:
-                'Type calories burned and minutes trained after each workout.',
-            onTap: () => onTrackingModeChanged('manual'),
-          ),
           TrackingChoiceCard(
             selected: trackingMode == 'appleHealth',
             icon: Icons.favorite_outline,
@@ -50,7 +42,7 @@ class TrackingModeOnboardingPage extends StatelessWidget {
           ),
           GapH(spacing.sectionSmall),
           const OnboardingBody(
-            'Recommended: Manual for the cleanest first setup.',
+            'You’ll be prompted to allow HealthKit access when this screen opens.',
           ),
         ],
       ),

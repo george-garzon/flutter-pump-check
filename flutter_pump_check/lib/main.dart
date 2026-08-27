@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cupertino_native_better/cupertino_native_better.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_pump_check/features/onboarding_feature/screens/onboarding_screen.dart';
@@ -45,6 +46,7 @@ class WorkoutBuddyApp extends StatelessWidget {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'Burn Camp',
+          navigatorObservers: [CNTabBarRouteObserver()],
           home: const SplashScreen(),
           routes: {
             '/dashboard': (context) => const DashboardScreen(),

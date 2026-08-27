@@ -24,7 +24,7 @@ class OnboardingPreferences {
       'trainingDaysPerWeek': prefs.getString(_trainingDaysKey),
       'focusAreas': prefs.getStringList(_focusAreasKey) ?? const <String>[],
       'goalCalories': prefs.getInt(_calorieGoalKey) ?? 500,
-      'workoutTrackingMode': prefs.getString(_trackingModeKey) ?? 'manual',
+      'workoutTrackingMode': prefs.getString(_trackingModeKey) ?? 'appleHealth',
       'onboardingCompleted': prefs.getBool(_completedKey) ?? false,
     };
   }
@@ -77,7 +77,7 @@ class OnboardingPreferences {
       if (existing['photoUrl'] == null) 'photoUrl': user.photoURL ?? '',
       if (existing['defaultWorkoutMinutes'] == null)
         'defaultWorkoutMinutes': 30,
-      'workoutTrackingMode': data['workoutTrackingMode'] ?? 'manual',
+      'workoutTrackingMode': data['workoutTrackingMode'] ?? 'appleHealth',
       if (existing['streakMode'] == null) 'streakMode': 'strict',
       if (existing['themeMode'] == null) 'themeMode': 'dark',
       if (existing['notificationsEnabled'] == null)

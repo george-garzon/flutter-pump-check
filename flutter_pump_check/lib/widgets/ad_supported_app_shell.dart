@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_pump_check/services/pro_entitlement_service.dart';
+import 'package:flutter_pump_check/widgets/mobile_ad_banner.dart';
 
 class AdSupportedAppShell extends StatelessWidget {
   final Widget child;
@@ -11,7 +12,21 @@ class AdSupportedAppShell extends StatelessWidget {
     return StreamBuilder<bool>(
       stream: ProEntitlementService.watchIsPro(),
       builder: (context, snapshot) {
-        return AdSupportedAppInsets(bottomAdHeight: 0, child: child);
+        final isPro = snapshot.data ?? false;
+
+        return AdSupportedAppInsets(
+          bottomAdHeight: 0,
+          child: Column(
+            children: [
+              Expanded(child: child),
+              if (!isPro)
+                SizedBox(
+                  height: MobileAdBanner.solidHeight(context),
+                  child: MobileAdBanner(),
+                ),
+            ],
+          ),
+        );
       },
     );
   }

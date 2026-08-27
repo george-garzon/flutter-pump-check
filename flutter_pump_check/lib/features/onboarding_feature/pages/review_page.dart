@@ -82,7 +82,7 @@ class ReviewOnboardingPage extends StatelessWidget {
 }
 
 String trackingModeLabel(String mode) {
-  return mode == 'appleHealth' ? 'Apple Health' : 'Manual tracking';
+  return 'Apple Health';
 }
 
 class _PlanHeroCard extends StatelessWidget {
@@ -119,14 +119,14 @@ class _PlanHeroCard extends StatelessWidget {
             children: [
               Icon(
                 Icons.verified,
-                color: ClaudePalette.charcoal,
+                color: ClaudePalette.cream,
                 size: dimensions.icons.md,
               ),
               GapW(spacing.md),
               Text(
                 'Personalized setup',
                 style: TextStyle(
-                  color: ClaudePalette.charcoal,
+                  color: ClaudePalette.cream,
                   fontSize: context.textSizes.s18,
                   fontWeight: FontWeight.w900,
                 ),
@@ -137,7 +137,7 @@ class _PlanHeroCard extends StatelessWidget {
           Text(
             '${trainingDays ?? '3-4 days'} · $calorieGoal calories/day',
             style: TextStyle(
-              color: ClaudePalette.charcoal,
+              color: ClaudePalette.cream,
               fontSize: context.textSizes.s28,
               height: 1.05,
               fontWeight: FontWeight.w900,
@@ -147,7 +147,7 @@ class _PlanHeroCard extends StatelessWidget {
           Text(
             'Start with ${trackingModeLabel(trackingMode).toLowerCase()} and build from there.',
             style: TextStyle(
-              color: ClaudePalette.charcoal.withValues(alpha: 0.75),
+              color: ClaudePalette.cream.withValues(alpha: 0.82),
               fontSize: context.textSizes.s16,
               fontWeight: FontWeight.w700,
               height: 1.25,
@@ -249,7 +249,7 @@ class _ReassuranceCard extends StatelessWidget {
           GapW(spacing.lg),
           Expanded(
             child: Text(
-              'You can reset personalization and switch tracking style anytime from Settings.',
+              'You can reset personalization anytime from Settings.',
               style: TextStyle(
                 color: ClaudePalette.mutedText,
                 fontSize: context.textSizes.s15,
